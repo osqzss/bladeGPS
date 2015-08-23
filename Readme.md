@@ -5,7 +5,7 @@ The code works with bladeRF and has been tested on Windows only.
 
 ### Additional include files and libraries
 
-1. libbladeRF.h and bladeRF.lib (build from the source)
+1. libbladeRF.h and bladeRF.lib (build from the [source](https://github.com/Nuand/bladeRF))
 2. pthread.h and pthreadVC2.lib (available from [sourceware.org/pthreads-win32](https://sourceware.org/pthreads-win32/))
 
 ### License
