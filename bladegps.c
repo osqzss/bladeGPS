@@ -2,6 +2,13 @@
 
 #include "bladegps.h"
 
+// for _getch used in Windows runtime.
+#ifdef WIN32
+#include <conio.h>
+#else
+#include "getch.h"
+#endif
+
 void init_sim(sim_t *s)
 {
 	s->tx.dev = NULL;
