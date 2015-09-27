@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <libbladeRF.h>
 #include <string.h>
-#include <conio.h> // for _getch used in Windows runtime.
 #include <pthread.h>
 
 #define TX_FREQUENCY	1575420000
