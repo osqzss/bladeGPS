@@ -143,7 +143,7 @@ void usage(void)
 		"  -e <gps_nav>     RINEX navigation file for GPS ephemerides (required)\n"
 		"  -u <user_motion> User motion file (dynamic mode)\n"
 		"  -g <nmea_gga>    NMEA GGA stream (dynamic mode)\n"
-		"  -l <location>    Lat,Lon,Hgt (static mode) e.g. 30.286502,120.032669,100\n"
+		"  -l <location>    Lat,Lon,Hgt (static mode) e.g. 35.274,137.014,100\n"
 		"  -t <date,time>   Scenario start time YYYY/MM/DD,hh:mm:ss\n"
 		"  -d <duration>    Duration [sec] (max: %.0f)\n",
 		((double)USER_MOTION_SIZE)/10.0);
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
 	double duration;
 	datetime_t t0;
 
-	if (argc<5)
+	if (argc<3)
 	{
 		usage();
 		exit(1);
@@ -174,7 +174,10 @@ int main(int argc, char *argv[])
 	s.opt.iduration = USER_MOTION_SIZE;
 	s.opt.verb = TRUE;
 	s.opt.nmeaGGA = FALSE;
-	s.opt.staticLocationMode = FALSE;
+	s.opt.staticLocationMode = TRUE; // default user motion
+	s.opt.llh[0] = 35.274016 / R2D;
+	s.opt.llh[1] = 137.013765 / R2D;
+	s.opt.llh[2] = 100.0;
 
 	while ((result=getopt(argc,argv,"e:u:g:l:t:d:"))!=-1)
 	{
@@ -186,14 +189,17 @@ int main(int argc, char *argv[])
 		case 'u':
 			strcpy(s.opt.umfile, optarg);
 			s.opt.nmeaGGA = FALSE;
+			s.opt.staticLocationMode = FALSE;
 			break;
 		case 'g':
 			strcpy(s.opt.umfile, optarg);
 			s.opt.nmeaGGA = TRUE;
+			s.opt.staticLocationMode = FALSE;
 			break;
 		case 'l':
 			// Static geodetic coordinates input mode
 			// Added by scateu@gmail.com
+			s.opt.nmeaGGA = FALSE;
 			s.opt.staticLocationMode = TRUE;
 			sscanf(optarg,"%lf,%lf,%lf",&s.opt.llh[0],&s.opt.llh[1],&s.opt.llh[2]);
 			s.opt.llh[0] /= R2D; // convert to RAD

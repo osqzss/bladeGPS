@@ -208,9 +208,10 @@ void date2gps(const datetime_t *t, gpstime_t *g)
 void gps2date(const gpstime_t *g, datetime_t *t)
 {
 	long c,d,e,f;
+	double gsec = ceil(g->sec);
 
 	// Convert Julian day number to calendar date
-	c = (long)(7.0*(double)g->week + floor(g->sec/86400.0)+2444245.0) + 1537;
+	c = (long)(7.0*(double)g->week + floor(gsec/86400.0)+2444245.0) + 1537;
 	d = (long)(((double)c-122.1)/365.25);
 	e = 365*d + d/4;
 	f = (long)((double)(c-e)/30.6001 );
@@ -219,9 +220,9 @@ void gps2date(const gpstime_t *g, datetime_t *t)
 	t->m = f - 1 - 12*(f/14);
 	t->y  = d - 4715 - ((7 + t->m)/10);
 
-	t->hh = ((int)(g->sec/3600.0))%24;
-	t->mm = ((int)(g->sec/60.0))%60;
-	t->sec = g->sec - 60.0*floor(g->sec/60.0);
+	t->hh = ((int)(gsec/3600.0))%24;
+	t->mm = ((int)(gsec/60.0))%60;
+	t->sec = gsec - 60.0*floor(gsec/60.0);
 
 	return;
 }
@@ -1706,10 +1707,9 @@ void *gps_task(void *arg)
 			xyz[iumd][2] = xyz[0][2];
 		}
 	}
-/*
+
 	printf("xyz = %11.1f, %11.1f, %11.1f\n", xyz[0][0], xyz[0][1], xyz[0][2]);
 	printf("llh = %11.6f, %11.6f, %11.1f\n", llh[0]*R2D, llh[1]*R2D, llh[2]);
-*/
 
 	////////////////////////////////////////////////////////////
 	// Read ephemeris
