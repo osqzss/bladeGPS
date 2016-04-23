@@ -6,6 +6,7 @@
 #include <libbladeRF.h>
 #include <string.h>
 #include <pthread.h>
+#include "gpssim.h"
 
 #define TX_FREQUENCY	1575420000
 #define TX_SAMPLERATE	2600000
@@ -20,6 +21,17 @@
 
 #define NUM_IQ_SAMPLES  (TX_SAMPLERATE / 10)
 #define FIFO_LENGTH     (NUM_IQ_SAMPLES * 2)
+
+typedef struct {
+	char navfile[MAX_CHAR];
+	char umfile[MAX_CHAR];
+	int staticLocationMode;
+	int nmeaGGA;
+	int iduration;
+	int verb;
+	gpstime_t g0;
+	double llh[3];
+} option_t;
 
 typedef struct {
 	pthread_t thread;
@@ -40,6 +52,8 @@ typedef struct {
 } gps_t;
 
 typedef struct {
+	option_t opt;
+
 	tx_t tx;
 	gps_t gps;
 

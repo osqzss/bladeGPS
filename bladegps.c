@@ -5,7 +5,9 @@
 // for _getch used in Windows runtime.
 #ifdef WIN32
 #include <conio.h>
+#include "getopt.h"
 #else
+#include <unistd.h>
 #include "getch.h"
 #endif
 
@@ -99,10 +101,11 @@ void *tx_task(void *arg)
 
 			if (is_fifo_write_ready(s)) {
 				pthread_cond_signal(&(s->fifo_write_ready));
-
+				/*
 				printf("\rTime = %4.1f", s->time);
 				s->time += 0.1;
 				fflush(stdout);
+				*/
 			}
 
 			// Advance the buffer pointer.
@@ -133,13 +136,112 @@ int start_gps_task(sim_t *s)
 	return(status);
 }
 
+void usage(void)
+{
+	printf("Usage: bladegps [options]\n"
+		"Options:\n"
+		"  -e <gps_nav>     RINEX navigation file for GPS ephemerides (required)\n"
+		"  -u <user_motion> User motion file (dynamic mode)\n"
+		"  -g <nmea_gga>    NMEA GGA stream (dynamic mode)\n"
+		"  -l <location>    Lat,Lon,Hgt (static mode) e.g. 30.286502,120.032669,100\n"
+		"  -t <date,time>   Scenario start time YYYY/MM/DD,hh:mm:ss\n"
+		"  -d <duration>    Duration [sec] (max: %.0f)\n",
+		((double)USER_MOTION_SIZE)/10.0);
+
+	return;
+}
+
 int main(int argc, char *argv[])
 {
 	sim_t s;
 	char *devstr = NULL;
 	int c;
 
-	// Initialize structures
+	int result;
+	double duration;
+	datetime_t t0;
+
+	if (argc<5)
+	{
+		usage();
+		exit(1);
+	}
+
+	s.opt.navfile[0] = 0;
+	s.opt.umfile[0] = 0;
+	s.opt.g0.week = -1;
+	s.opt.g0.sec = 0.0;
+	s.opt.iduration = USER_MOTION_SIZE;
+	s.opt.verb = TRUE;
+	s.opt.nmeaGGA = FALSE;
+	s.opt.staticLocationMode = FALSE;
+
+	while ((result=getopt(argc,argv,"e:u:g:l:t:d:"))!=-1)
+	{
+		switch (result)
+		{
+		case 'e':
+			strcpy(s.opt.navfile, optarg);
+			break;
+		case 'u':
+			strcpy(s.opt.umfile, optarg);
+			s.opt.nmeaGGA = FALSE;
+			break;
+		case 'g':
+			strcpy(s.opt.umfile, optarg);
+			s.opt.nmeaGGA = TRUE;
+			break;
+		case 'l':
+			// Static geodetic coordinates input mode
+			// Added by scateu@gmail.com
+			s.opt.staticLocationMode = TRUE;
+			sscanf(optarg,"%lf,%lf,%lf",&s.opt.llh[0],&s.opt.llh[1],&s.opt.llh[2]);
+			s.opt.llh[0] /= R2D; // convert to RAD
+			s.opt.llh[1] /= R2D; // convert to RAD
+			break;
+		case 't':
+			sscanf(optarg, "%d/%d/%d,%d:%d:%lf", &t0.y, &t0.m, &t0.d, &t0.hh, &t0.mm, &t0.sec);
+			if (t0.y<=1980 || t0.m<1 || t0.m>12 || t0.d<1 || t0.d>31 ||
+				t0.hh<0 || t0.hh>23 || t0.mm<0 || t0.mm>59 || t0.sec<0.0 || t0.sec>=60.0)
+			{
+				printf("ERROR: Invalid date and time.\n");
+				exit(1);
+			}
+			t0.sec = floor(t0.sec);
+			date2gps(&t0, &s.opt.g0);
+			break;
+		case 'd':
+			duration = atof(optarg);
+			if (duration<0.0 || duration>((double)USER_MOTION_SIZE)/10.0)
+			{
+				printf("ERROR: Invalid duration.\n");
+				exit(1);
+			}
+			s.opt.iduration = (int)(duration*10.0+0.5);
+			break;
+		case ':':
+		case '?':
+			usage();
+			exit(1);
+		default:
+			break;
+		}
+	}
+
+	if (s.opt.navfile[0]==0)
+	{
+		printf("ERROR: GPS ephemeris file is not specified.\n");
+		exit(1);
+	}
+
+	if (s.opt.umfile[0]==0 && !s.opt.staticLocationMode)
+	{
+		printf("ERROR: User motion file / NMEA GGA stream is not specified.\n");
+		printf("You may use -l to specify the static location directly.\n");
+		exit(1);
+	}
+
+	// Initialize simulator
 	init_sim(&s);
 
 	// Allocate TX buffer to hold each block of samples to transmit.
