@@ -2035,10 +2035,11 @@ void *gps_task(void *arg)
 
 		// Write into FIFO
 		memcpy(&(s->fifo[s->head * 2]), iq_buff, NUM_IQ_SAMPLES * 2 * sizeof(short));
-		
+
 		s->head += (long)NUM_IQ_SAMPLES;
 		if (s->head >= FIFO_LENGTH)
 			s->head -= FIFO_LENGTH;
+		pthread_cond_signal(&(s->fifo_read_ready));
 #endif
 		//
 		// Update navigation message and channel allocation every 30 seconds
@@ -2079,6 +2080,7 @@ void *gps_task(void *arg)
 		printf("\rTime into run = %4.1f", grx.sec-g0.sec);
 		fflush(stdout);
 	}
+	s->finished = true;
 
 	// Free I/Q buffer
 	free(iq_buff);

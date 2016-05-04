@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <libbladeRF.h>
 #include <string.h>
+#ifdef _WIN32
+// To avoid conflict between time.h and pthread.h on Windows
+#define HAVE_STRUCT_TIMESPEC
+#endif
 #include <pthread.h>
 #include "gpssim.h"
 
@@ -58,10 +62,12 @@ typedef struct {
 	gps_t gps;
 
 	int status;
+	bool finished;
 	int16_t *fifo;
 	long head, tail;
 	size_t sample_length;
 
+	pthread_cond_t fifo_read_ready;
 	pthread_cond_t fifo_write_ready;
 
 	double time;
