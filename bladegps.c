@@ -28,6 +28,7 @@ void init_sim(sim_t *s)
 	s->sample_length = 0;
 
 	pthread_cond_init(&(s->fifo_write_ready), NULL);
+	pthread_cond_init(&(s->fifo_read_ready), NULL);
 
 	s->time = 0.0;
 }
@@ -73,6 +74,11 @@ size_t fifo_read(int16_t *buffer, size_t samples, sim_t *s)
 	return(length);
 }
 
+bool is_finished_generation(sim_t *s)
+{
+	return s->finished;
+}
+
 int is_fifo_write_ready(sim_t *s)
 {
 	int status = 0;
@@ -95,19 +101,32 @@ void *tx_task(void *arg)
 
 		while (buffer_samples_remaining > 0) {
 			
-			samples_populated = fifo_read(tx_buffer_current, 
-						buffer_samples_remaining,
-						s);
+			pthread_mutex_lock(&(s->gps.lock));
+			while (get_sample_length(s) == 0)
+			{
+				pthread_cond_wait(&(s->fifo_read_ready), &(s->gps.lock));
+			}
+//			assert(get_sample_length(s) > 0);
 
+			samples_populated = fifo_read(tx_buffer_current,
+				buffer_samples_remaining,
+				s);
+			pthread_mutex_unlock(&(s->gps.lock));
+
+			pthread_cond_signal(&(s->fifo_write_ready));
+#if 0
 			if (is_fifo_write_ready(s)) {
-				pthread_cond_signal(&(s->fifo_write_ready));
 				/*
 				printf("\rTime = %4.1f", s->time);
 				s->time += 0.1;
 				fflush(stdout);
 				*/
 			}
-
+			else if (is_finished_generation(s))
+			{
+				goto out;
+			}
+#endif
 			// Advance the buffer pointer.
 			buffer_samples_remaining -= (unsigned int)samples_populated;
 			tx_buffer_current += (2 * samples_populated);
@@ -115,7 +134,21 @@ void *tx_task(void *arg)
 
 		// If there were no errors, transmit the data buffer.
 		bladerf_sync_tx(s->tx.dev, s->tx.buffer, SAMPLES_PER_BUFFER, NULL, TIMEOUT_MS);
+		if (is_fifo_write_ready(s)) {
+			/*
+			printf("\rTime = %4.1f", s->time);
+			s->time += 0.1;
+			fflush(stdout);
+			*/
+		}
+		else if (is_finished_generation(s))
+		{
+			goto out;
+		}
+
 	}
+out:
+	return NULL;
 }
 
 int start_tx_task(sim_t *s)
@@ -166,6 +199,7 @@ int main(int argc, char *argv[])
 		usage();
 		exit(1);
 	}
+	s.finished = false;
 
 	s.opt.navfile[0] = 0;
 	s.opt.umfile[0] = 0;
@@ -371,7 +405,8 @@ int main(int argc, char *argv[])
 
 	// Running...
 	printf("Running...\n");
-	printf("Press 'q' to exit.\n");
+	pthread_join(s.tx.thread, NULL);
+	printf("\nPress 'q' to exit.\n");
 	while (1) {
 		c = _getch();
 		if (c=='q')
