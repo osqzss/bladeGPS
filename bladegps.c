@@ -8,7 +8,6 @@
 #include "getopt.h"
 #else
 #include <unistd.h>
-#include "getch.h"
 #endif
 
 void init_sim(sim_t *s)
@@ -188,7 +187,6 @@ int main(int argc, char *argv[])
 {
 	sim_t s;
 	char *devstr = NULL;
-	int c;
 
 	int result;
 	double duration;
@@ -405,25 +403,16 @@ int main(int argc, char *argv[])
 
 	// Running...
 	printf("Running...\n");
+	printf("Press 'Ctrl+C' to abort.\n");
+
+	// Wainting for TX task to complete.
 	pthread_join(s.tx.thread, NULL);
-	printf("\nPress 'q' to exit.\n");
-	while (1) {
-		c = _getch();
-		if (c=='q')
-			break;
-	}
-
-	//
-	// TODO: Cleaning up the threads properly.
-	//
-
 	printf("\nDone!\n");
 
-	// Disable TX module, shutting down our underlying TX stream.
+	// Disable TX module and shut down underlying TX stream.
 	s.status = bladerf_enable_module(s.tx.dev, BLADERF_MODULE_TX, false);
-	if (s.status != 0) {
+	if (s.status != 0)
 		fprintf(stderr, "Failed to disable TX module: %s\n", bladerf_strerror(s.status));
-	}
 
 out:
 	// Free up resources

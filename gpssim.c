@@ -208,7 +208,7 @@ void date2gps(const datetime_t *t, gpstime_t *g)
 void gps2date(const gpstime_t *g, datetime_t *t)
 {
 	long c,d,e,f;
-	double gsec = ceil(g->sec);
+	double gsec = round(g->sec);
 
 	// Convert Julian day number to calendar date
 	c = (long)(7.0*(double)g->week + floor(gsec/86400.0)+2444245.0) + 1537;
@@ -2080,6 +2080,8 @@ void *gps_task(void *arg)
 		printf("\rTime into run = %4.1f", grx.sec-g0.sec);
 		fflush(stdout);
 	}
+
+	// Done!
 	s->finished = true;
 
 	// Free I/Q buffer
