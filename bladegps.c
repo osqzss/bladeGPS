@@ -177,7 +177,8 @@ void usage(void)
 		"  -g <nmea_gga>    NMEA GGA stream (dynamic mode)\n"
 		"  -l <location>    Lat,Lon,Hgt (static mode) e.g. 35.274,137.014,100\n"
 		"  -t <date,time>   Scenario start time YYYY/MM/DD,hh:mm:ss\n"
-		"  -d <duration>    Duration [sec] (max: %.0f)\n",
+		"  -d <duration>    Duration [sec] (max: %.0f)\n"
+                "  -x <XB number>   Enable XB board, e.g. '-x 200' for XB200\n",
 		((double)USER_MOTION_SIZE)/10.0);
 
 	return;
@@ -187,6 +188,7 @@ int main(int argc, char *argv[])
 {
 	sim_t s;
 	char *devstr = NULL;
+        int xb_board=0;
 
 	int result;
 	double duration;
@@ -211,7 +213,7 @@ int main(int argc, char *argv[])
 	s.opt.llh[1] = 137.013765 / R2D;
 	s.opt.llh[2] = 100.0;
 
-	while ((result=getopt(argc,argv,"e:u:g:l:t:d:"))!=-1)
+	while ((result=getopt(argc,argv,"e:u:g:l:t:d:x:"))!=-1)
 	{
 		switch (result)
 		{
@@ -257,6 +259,9 @@ int main(int argc, char *argv[])
 			}
 			s.opt.iduration = (int)(duration*10.0+0.5);
 			break;
+                case 'x':
+                        xb_board=atoi(optarg);
+                        break;
 		case ':':
 		case '?':
 			usage();
@@ -306,6 +311,44 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Failed to open device: %s\n", bladerf_strerror(s.status));
 		goto out;
 	}
+
+        if(xb_board == 200) {
+                s.status = bladerf_expansion_attach(s.tx.dev, BLADERF_XB_200);
+                if (s.status != 0) {
+                        fprintf(stderr, "Failed to enable XB200: %s\n", bladerf_strerror(s.status));
+                        goto out;
+                }
+
+                s.status = bladerf_xb200_set_filterbank(s.tx.dev, BLADERF_MODULE_TX, BLADERF_XB200_CUSTOM);
+                if (s.status != 0) {
+                        fprintf(stderr, "Failed to set XB200 TX filterbank: %s\n", bladerf_strerror(s.status));
+                        goto out;
+                }
+
+                s.status = bladerf_xb200_set_path(s.tx.dev, BLADERF_MODULE_TX, BLADERF_XB200_BYPASS);
+                if (s.status != 0) {
+                        fprintf(stderr, "Failed to enable TX bypass path on XB200: %s\n", bladerf_strerror(s.status));
+                        goto out;
+                }
+
+                //For sake of completeness set also RX path to a known good state.
+                s.status = bladerf_xb200_set_filterbank(s.tx.dev, BLADERF_MODULE_RX, BLADERF_XB200_CUSTOM);
+                if (s.status != 0) {
+                        fprintf(stderr, "Failed to set XB200 RX filterbank: %s\n", bladerf_strerror(s.status));
+                        goto out;
+                }
+
+                s.status = bladerf_xb200_set_path(s.tx.dev, BLADERF_MODULE_RX, BLADERF_XB200_BYPASS);
+                if (s.status != 0) {
+                        fprintf(stderr, "Failed to enable RX bypass path on XB200: %s\n", bladerf_strerror(s.status));
+                        goto out;
+                }
+        }
+
+        if(xb_board == 300) {
+                fprintf(stderr, "XB300 does not support transmitting on GPS frequency\n");
+                goto out;
+        }
 
 	s.status = bladerf_set_frequency(s.tx.dev, BLADERF_MODULE_TX, TX_FREQUENCY);
 	if (s.status != 0) {
