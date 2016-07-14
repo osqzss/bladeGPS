@@ -12,6 +12,7 @@ Options:
   -l <location>    Lat,Lon,Hgt (static mode) e.g. 35.274,137.014,100"
   -t <date,time>   Scenario start time YYYY/MM/DD,hh:mm:ss
   -d <duration>    Duration [sec] (max: 86400)
+  -x <XB_number>   Enable XB board, e.g. '-x 200' for XB200
 ```
 
 ### Additional include files and libraries
