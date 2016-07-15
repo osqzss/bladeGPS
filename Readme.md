@@ -9,7 +9,7 @@ Options:
   -e <gps_nav>     RINEX navigation file for GPS ephemerides (required)
   -u <user_motion> User motion file (dynamic mode)
   -g <nmea_gga>    NMEA GGA stream (dynamic mode)
-  -l <location>    Lat,Lon,Hgt (static mode) e.g. 35.274,137.014,100"
+  -l <location>    Lat,Lon,Hgt (static mode) e.g. 35.274,137.014,100
   -t <date,time>   Scenario start time YYYY/MM/DD,hh:mm:ss
   -d <duration>    Duration [sec] (max: 86400)
   -x <XB_number>   Enable XB board, e.g. '-x 200' for XB200
