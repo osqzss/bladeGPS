@@ -13,6 +13,7 @@ Options:
   -t <date,time>   Scenario start time YYYY/MM/DD,hh:mm:ss
   -d <duration>    Duration [sec] (max: 86400)
   -x <XB_number>   Enable XB board, e.g. '-x 200' for XB200
+  -i               Interactive mode: North='w', South='s', East='d', West='a'
 ```
 
 ### Additional include files and libraries
@@ -20,7 +21,7 @@ Options:
 1. libbladeRF.h and bladeRF.lib (build from the [source](https://github.com/Nuand/bladeRF))
 2. pthread.h and pthreadVC2.lib (available from [sourceware.org/pthreads-win32](https://sourceware.org/pthreads-win32/))
 
-### Build on Linux
+### Build on Linux (Untested)
 
 1. Retrive the bladeRF source in a directory next to the current directory.
 

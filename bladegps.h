@@ -26,6 +26,25 @@
 #define NUM_IQ_SAMPLES  (TX_SAMPLERATE / 10)
 #define FIFO_LENGTH     (NUM_IQ_SAMPLES * 2)
 
+// Interactive mode directions
+#define UNDEF 0
+#define NORTH 1
+#define SOUTH 2
+#define EAST  3
+#define WEST  4
+#define UP    5
+#define DOWN  6
+// Interactive keys
+#define NORTH_KEY 'w'
+#define SOUTH_KEY 's'
+#define EAST_KEY  'd'
+#define WEST_KEY  'a'
+#define UP_KEY    'e'
+#define DOWN_KEY  'q'
+// Interactive motion
+#define MAX_VEL 1.4 // 1.4 m/s = 5 km/h
+#define DEL_VEL 0.1
+
 typedef struct {
 	char navfile[MAX_CHAR];
 	char umfile[MAX_CHAR];
@@ -35,6 +54,7 @@ typedef struct {
 	int verb;
 	gpstime_t g0;
 	double llh[3];
+	int interactive;
 } option_t;
 
 typedef struct {

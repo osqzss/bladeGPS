@@ -16,6 +16,7 @@
 #include "gpssim.h"
 #ifdef BLADE_GPS
 #include "bladegps.h"
+#include <conio.h>
 #endif
 
 int sinTable512[] = {
@@ -1483,6 +1484,15 @@ void *gps_task(void *arg)
 	double samp_freq;
 	double duration;
 	int result;
+#else
+	int interactive = FALSE;
+	int cnt = 0;
+	int key;
+	int key_direction;
+	int direction = UNDEF;
+	double velocity = 0.0;
+	double tmat[3][3];
+	double neu[3];
 #endif
 
 	////////////////////////////////////////////////////////////
@@ -1621,6 +1631,8 @@ void *gps_task(void *arg)
 	iq_buff_size = NUM_IQ_SAMPLES;
 
 	delt = 1.0/(double)TX_SAMPLERATE;
+
+	interactive = s->opt.interactive;
 #endif
 
 	////////////////////////////////////////////////////////////
@@ -1707,6 +1719,16 @@ void *gps_task(void *arg)
 			xyz[iumd][2] = xyz[0][2];
 		}
 	}
+
+#ifdef BLADE_GPS
+	// Initialize the local tangential matrix for interactive mode
+	ltcmat(llh, tmat);
+	if (interactive)
+	{
+		printf("Enable interactive mode.\n");
+		numd = iduration;
+	}
+#endif
 
 	printf("xyz = %11.1f, %11.1f, %11.1f\n", xyz[0][0], xyz[0][1], xyz[0][2]);
 	printf("llh = %11.6f, %11.6f, %11.1f\n", llh[0]*R2D, llh[1]*R2D, llh[2]);
@@ -1898,6 +1920,86 @@ void *gps_task(void *arg)
 
 	for (iumd=1; iumd<numd; iumd++)
 	{
+#ifdef BLADE_GPS
+		if (interactive)
+		{
+			key_direction = UNDEF;
+
+			if(_kbhit())
+			{
+				key = _getch();
+				switch (key)
+				{
+				case NORTH_KEY:
+					key_direction = NORTH;
+					break;
+				case SOUTH_KEY:
+					key_direction = SOUTH;
+					break;
+				case EAST_KEY:
+					key_direction = EAST;
+					break;
+				case WEST_KEY:
+					key_direction = WEST;
+					break;
+				default:
+					break;
+				}
+			}
+
+			if ((key_direction!=UNDEF)&&(direction==key_direction))
+			{
+				// Accelerate toward the key direction
+				if (velocity<MAX_VEL)
+					velocity += DEL_VEL;
+			}
+			else
+			{
+				// Deaccelerate and stop
+				if (velocity>=0.0)
+					velocity -= DEL_VEL;
+				else
+					direction = key_direction; // then change the direction
+			}
+
+			// Stay at the current location
+			xyz[iumd][0] = xyz[iumd-1][0];
+			xyz[iumd][1] = xyz[iumd-1][1];
+			xyz[iumd][2] = xyz[iumd-1][2];
+
+			if ((direction!=UNDEF)&&(velocity>=0.0))
+			{
+				// Update the user location
+				neu[0] = 0.0;
+				neu[1] = 0.0;
+				neu[2] = 0.0;
+
+				//xyz2llh(xyz[iumd-1], llh);
+				//ltcmat(llh, tmat);
+
+				switch(direction)
+				{
+				case NORTH:
+					neu[0] = velocity * 0.1;
+					break;
+				case SOUTH:
+					neu[0] = -velocity * 0.1;
+					break;
+				case EAST:
+					neu[1] = velocity * 0.1;
+					break;
+				case WEST:
+					neu[1] = -velocity * 0.1;
+				default:
+					break;
+				}
+
+				xyz[iumd][0] += tmat[0][0]*neu[0] + tmat[1][0]*neu[1] + tmat[2][0]*neu[2];
+				xyz[iumd][1] += tmat[0][1]*neu[0] + tmat[1][1]*neu[1] + tmat[2][1]*neu[2];
+				xyz[iumd][2] += tmat[0][2]*neu[0] + tmat[1][2]*neu[1] + tmat[2][2]*neu[2];
+			}
+		}
+#endif
 		for (i=0; i<MAX_CHAN; i++)
 		{
 			if (chan[i].prn>0)
@@ -2064,6 +2166,9 @@ void *gps_task(void *arg)
 				gps2date(&grx, &t0);
 				printf("%4d/%02d/%02d,%02d:%02d:%02.0f (%d:%.0f)\n", 
 					t0.y, t0.m, t0.d, t0.hh, t0.mm, t0.sec, grx.week, grx.sec);
+				printf("xyz = %11.1f, %11.1f, %11.1f\n", xyz[iumd][0], xyz[iumd][1], xyz[iumd][2]);
+				xyz2llh(xyz[iumd],llh);
+				printf("llh = %11.6f, %11.6f, %11.1f\n", llh[0]*R2D, llh[1]*R2D, llh[2]);
 				for (i=0; i<MAX_CHAN; i++)
 				{
 					if (chan[i].prn>0)

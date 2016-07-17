@@ -178,8 +178,10 @@ void usage(void)
 		"  -l <location>    Lat,Lon,Hgt (static mode) e.g. 35.274,137.014,100\n"
 		"  -t <date,time>   Scenario start time YYYY/MM/DD,hh:mm:ss\n"
 		"  -d <duration>    Duration [sec] (max: %.0f)\n"
-		"  -x <XB number>   Enable XB board, e.g. '-x 200' for XB200\n",
-		((double)USER_MOTION_SIZE)/10.0);
+		"  -x <XB number>   Enable XB board, e.g. '-x 200' for XB200\n"
+		"  -i               Interactive mode: North='%c', South='%c', East='%c', West='%c'\n",
+		((double)USER_MOTION_SIZE)/10.0,
+		NORTH_KEY, SOUTH_KEY, EAST_KEY, WEST_KEY);
 
 	return;
 }
@@ -212,8 +214,9 @@ int main(int argc, char *argv[])
 	s.opt.llh[0] = 35.274016 / R2D;
 	s.opt.llh[1] = 137.013765 / R2D;
 	s.opt.llh[2] = 100.0;
+	s.opt.interactive = FALSE;
 
-	while ((result=getopt(argc,argv,"e:u:g:l:t:d:x:"))!=-1)
+	while ((result=getopt(argc,argv,"e:u:g:l:t:d:x:i"))!=-1)
 	{
 		switch (result)
 		{
@@ -261,6 +264,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'x':
 			xb_board=atoi(optarg);
+			break;
+		case 'i':
+			s.opt.interactive = TRUE;
 			break;
 		case ':':
 		case '?':
@@ -313,6 +319,8 @@ int main(int argc, char *argv[])
 	}
 
 	if(xb_board == 200) {
+		printf("Initializing XB200 expansion board...\n");
+
 		s.status = bladerf_expansion_attach(s.tx.dev, BLADERF_XB_200);
 		if (s.status != 0) {
 			fprintf(stderr, "Failed to enable XB200: %s\n", bladerf_strerror(s.status));
