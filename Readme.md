@@ -16,10 +16,32 @@ Options:
   -i               Interactive mode: North='w', South='s', East='d', West='a'
 ```
 
-### Additional include files and libraries
+### Build on Windows with Visual Studio
 
-1. libbladeRF.h and bladeRF.lib (build from the [source](https://github.com/Nuand/bladeRF))
-2. pthread.h and pthreadVC2.lib (available from [sourceware.org/pthreads-win32](https://sourceware.org/pthreads-win32/))
+Follow the instructions at [Nuand wiki page](https://github.com/Nuand/bladeRF/wiki/Getting-Started%3A-Windows) and build the bladeRF library from the source with Visual Studio 2013 Express for Windows Desktop. Assume you already downloaded pthread and libusb files and successfully built the bladeRF library for your Windows environment.
+
+1. Start Visual Studio.
+2. Create an empty project for a console application.
+3. On the _Solution Explorer_ at right, add the following files to the project:
+* __bladegps.c__ and __bladegps.h__
+* __gpssim.c__ and __gpssim.h__
+* __getopt.c__ and __getopt.h__
+4. Add the paths to the following folders in ```Configuration Properties -> C/C++ -> General -> Additional Include Directories```:
+* __pthreads-w32-2-9-1-release/Pre-built.2/include__ for pthread.h
+* __bladeRF/include__ for libbladeRF.h
+5. Add the paths to the following folders in ```Configuration Properties -> Linker -> General -> Additional Library Directories```:
+* __pthreads-w32-2-9-1-release/Pre-built.2/lib/x64__ for pthreadVC2.lib
+* __bladeRF/x64__ for bladeRF.lib
+6. Specify the name of the additional libraries in ```Configuration Properties -> Linker -> Input -> Additional Dependencies```:
+* __pthreadVC2.lib__
+* __bladeRF.lib__
+7. Select __Release__ in the _Solution Configurations_ drop-down list.
+8. Run ```Build -> Build Solution```
+
+After the build completes, you can find the executable in the __Release__ folder. You should put the copies of the following DLLs in the same folder to run the code.
+* __bladeRF.dll__
+* __libusb-1.0.dll__
+* __pthreadVC2.dll__
 
 ### Build on Linux (Untested)
 
