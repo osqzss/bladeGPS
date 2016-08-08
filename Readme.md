@@ -11,9 +11,11 @@ Options:
   -g <nmea_gga>    NMEA GGA stream (dynamic mode)
   -l <location>    Lat,Lon,Hgt (static mode) e.g. 35.274,137.014,100
   -t <date,time>   Scenario start time YYYY/MM/DD,hh:mm:ss
+  -T <date,time>   Overwrite TOC and TOE to scenario start time
   -d <duration>    Duration [sec] (max: 86400)
   -x <XB_number>   Enable XB board, e.g. '-x 200' for XB200
   -i               Interactive mode: North='w', South='s', East='d', West='a'
+  -I               Disable ionospheric delay for spacecraft scenario
 ```
 
 ### Build on Windows with Visual Studio

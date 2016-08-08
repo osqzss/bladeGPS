@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <libbladeRF.h>
 #include <string.h>
+#include <time.h>
 #ifdef _WIN32
 // To avoid conflict between time.h and pthread.h on Windows
 #define HAVE_STRUCT_TIMESPEC
@@ -42,8 +43,8 @@
 #define UP_KEY    'e'
 #define DOWN_KEY  'q'
 // Interactive motion
-#define MAX_VEL 1.4 // 1.4 m/s = 5 km/h
-#define DEL_VEL 0.1
+#define MAX_VEL 2.7 // 2.77 m/s = 10 km/h
+#define DEL_VEL 0.2
 
 typedef struct {
 	char navfile[MAX_CHAR];
@@ -55,6 +56,8 @@ typedef struct {
 	gpstime_t g0;
 	double llh[3];
 	int interactive;
+	int timeoverwrite;
+	int iono_enable;
 } option_t;
 
 typedef struct {

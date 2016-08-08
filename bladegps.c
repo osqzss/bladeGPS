@@ -177,10 +177,14 @@ void usage(void)
 		"  -g <nmea_gga>    NMEA GGA stream (dynamic mode)\n"
 		"  -l <location>    Lat,Lon,Hgt (static mode) e.g. 35.274,137.014,100\n"
 		"  -t <date,time>   Scenario start time YYYY/MM/DD,hh:mm:ss\n"
+		"  -T <date,time>   Overwrite TOC and TOE to scenario start time\n"
 		"  -d <duration>    Duration [sec] (max: %.0f)\n"
 		"  -x <XB number>   Enable XB board, e.g. '-x 200' for XB200\n"
-		"  -i               Interactive mode: North='%c', South='%c', East='%c', West='%c'\n",
-		((double)USER_MOTION_SIZE)/10.0,
+		"  -a <tx_vga1>     TX VGA1 (default: %d)\n"
+		"  -i               Interactive mode: North='%c', South='%c', East='%c', West='%c'\n"
+		"  -I               Disable ionospheric delay for spacecraft scenario\n",
+		((double)USER_MOTION_SIZE)/10.0, 
+		TX_VGA1,
 		NORTH_KEY, SOUTH_KEY, EAST_KEY, WEST_KEY);
 
 	return;
@@ -195,6 +199,8 @@ int main(int argc, char *argv[])
 	int result;
 	double duration;
 	datetime_t t0;
+
+	int txvga1 = TX_VGA1;
 
 	if (argc<3)
 	{
@@ -211,12 +217,14 @@ int main(int argc, char *argv[])
 	s.opt.verb = TRUE;
 	s.opt.nmeaGGA = FALSE;
 	s.opt.staticLocationMode = TRUE; // default user motion
-	s.opt.llh[0] = 35.274016 / R2D;
-	s.opt.llh[1] = 137.013765 / R2D;
+	s.opt.llh[0] = 40.7850916 / R2D;
+	s.opt.llh[1] = -73.968285 / R2D;
 	s.opt.llh[2] = 100.0;
 	s.opt.interactive = FALSE;
+	s.opt.timeoverwrite = FALSE;
+	s.opt.iono_enable = TRUE;
 
-	while ((result=getopt(argc,argv,"e:u:g:l:t:d:x:i"))!=-1)
+	while ((result=getopt(argc,argv,"e:u:g:l:T:t:d:x:a:iI"))!=-1)
 	{
 		switch (result)
 		{
@@ -242,6 +250,27 @@ int main(int argc, char *argv[])
 			s.opt.llh[0] /= R2D; // convert to RAD
 			s.opt.llh[1] /= R2D; // convert to RAD
 			break;
+		case 'T':
+			s.opt.timeoverwrite = TRUE;
+			if (strncmp(optarg, "now", 3)==0)
+			{
+				time_t timer;
+				struct tm *gmt;
+				
+				time(&timer);
+				gmt = gmtime(&timer);
+
+				t0.y = gmt->tm_year+1900;
+				t0.m = gmt->tm_mon+1;
+				t0.d = gmt->tm_mday;
+				t0.hh = gmt->tm_hour;
+				t0.mm = gmt->tm_min;
+				t0.sec = (double)gmt->tm_sec;
+
+				date2gps(&t0, &s.opt.g0);
+
+				break;
+			}
 		case 't':
 			sscanf(optarg, "%d/%d/%d,%d:%d:%lf", &t0.y, &t0.m, &t0.d, &t0.hh, &t0.mm, &t0.sec);
 			if (t0.y<=1980 || t0.m<1 || t0.m>12 || t0.d<1 || t0.d>31 ||
@@ -265,8 +294,20 @@ int main(int argc, char *argv[])
 		case 'x':
 			xb_board=atoi(optarg);
 			break;
+		case 'a':
+			txvga1 = atoi(optarg);
+			if (txvga1>0)
+				txvga1 *= -1;
+
+			if (txvga1<BLADERF_TXVGA1_GAIN_MIN)
+				txvga1 = BLADERF_TXVGA1_GAIN_MIN;
+			else if (txvga1>BLADERF_TXVGA1_GAIN_MAX)
+				txvga1 = BLADERF_TXVGA1_GAIN_MAX;
 		case 'i':
 			s.opt.interactive = TRUE;
+			break;
+		case 'I':
+			s.opt.iono_enable = FALSE; // Disable ionospheric correction
 			break;
 		case ':':
 		case '?':
@@ -385,13 +426,15 @@ int main(int argc, char *argv[])
 		printf("TX bandwidth: %u Hz\n", TX_BANDWIDTH);
 	}
 
-	s.status = bladerf_set_txvga1(s.tx.dev, TX_VGA1);
+	//s.status = bladerf_set_txvga1(s.tx.dev, TX_VGA1);
+	s.status = bladerf_set_txvga1(s.tx.dev, txvga1);
 	if (s.status != 0) {
 		fprintf(stderr, "Failed to set TX VGA1 gain: %s\n", bladerf_strerror(s.status));
 		goto out;
 	}
 	else {
-		printf("TX VGA1 gain: %d dB\n", TX_VGA1);
+		//printf("TX VGA1 gain: %d dB\n", TX_VGA1);
+		printf("TX VGA1 gain: %d dB\n", txvga1);
 	}
 
 	s.status = bladerf_set_txvga2(s.tx.dev, TX_VGA2);
