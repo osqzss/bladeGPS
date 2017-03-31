@@ -2319,7 +2319,7 @@ void *gps_task(void *arg)
 				ant_gain = ant_pat[ibs];
 
 				// Signal gain
-				gain[i] = (int)(path_loss*ant_gain*100.0); // scaled by 100
+				gain[i] = (int)(path_loss*ant_gain*128.0); // scaled by 2^7
 			}
 		}
 
@@ -2337,8 +2337,9 @@ void *gps_task(void *arg)
 					ip = chan[i].dataBit * chan[i].codeCA * cosTable512[iTable] * gain[i];
 					qp = chan[i].dataBit * chan[i].codeCA * sinTable512[iTable] * gain[i];
 
-					i_acc += (ip + 50)/100;
-					q_acc += (qp + 50)/100;
+					// Accumulate for all visible satellites
+					i_acc += ip;
+					q_acc += qp;
 
 					// Update code phase
 					chan[i].code_phase += chan[i].f_code * delt;
@@ -2377,11 +2378,14 @@ void *gps_task(void *arg)
 				}
 			}
 
+			// Scaled by 2^7
+			i_acc = (i_acc+64)>>7;
+			q_acc = (q_acc+64)>>7;
+
 			// Store I/Q samples into buffer
 			iq_buff[isamp*2] = (short)i_acc;
 			iq_buff[isamp*2+1] = (short)q_acc;
-
-		} // End of omp parallel for
+		}
 
 #ifndef BLADE_GPS
 		if (data_format==SC01)
