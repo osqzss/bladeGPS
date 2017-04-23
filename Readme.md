@@ -46,6 +46,32 @@ After a successful build, you can find the executable in the __Release__ folder.
 * __libusb-1.0.dll__
 * __pthreadVC2.dll__
 
+
+### Build on Windows - Instructions Courtesy of OSQZSS
+
+You can find the instructions to build the bladeRF library from the source with Visual Studio 2013 Express for Windows Desktop in the Nuand wiki page:
+https://github.com/Nuand/bladeRF/wiki/Getting-Started%3A-Windows
+
+Assume you already downloaded pthread and libusb files and successfully built the bladeRF library.
+
+In order to build bladeGPS, you need to add the paths to the following folders in Configuration Properties -> C/C++ -> General -> Additional Include Directoris:
+
+“pthreads-w32-2-9-1-release/Pre-built.2/include” for pthread.h
+“bladeRF/include” for libbladeRF.h
+You also need to add the paths to the following folders in Configuration Properties -> Linker -> General -> Additional Library Directories:
+
+“pthreads-w32-2-9-1-release/Pre-built.2/lib/x64” for pthreadVC2.lib
+“bladeRF/x64” for bladeRF.lib
+For the link command, specify the name of the additional libraries in Configuration Properties -> Linker -> Input -> Additional Dependencies:
+
+pthreadVC2.lib
+bladeRF.lib
+Basically that's it! Now you should be able to build the code. In order to execute bladeGPS, you need the following DLLs in the same folder:
+
+bladeRF.dll
+libusb-1.0.dll
+pthreadVC2.dll
+
 ### Build on Linux (Untested)
 
 1. Retrive the bladeRF source in a directory next to the current directory.
