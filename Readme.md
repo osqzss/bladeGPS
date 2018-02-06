@@ -16,6 +16,7 @@ Options:
   -x <XB_number>   Enable XB board, e.g. '-x 200' for XB200
   -i               Interactive mode: North='w', South='s', East='d', West='a'
   -I               Disable ionospheric delay for spacecraft scenario
+  -p               Disable path loss and hold power level constant
 ```
 
 ### Build on Windows with Visual Studio
