@@ -182,7 +182,8 @@ void usage(void)
 		"  -x <XB number>   Enable XB board, e.g. '-x 200' for XB200\n"
 		"  -a <tx_vga1>     TX VGA1 (default: %d)\n"
 		"  -i               Interactive mode: North='%c', South='%c', East='%c', West='%c'\n"
-		"  -I               Disable ionospheric delay for spacecraft scenario\n",
+		"  -I               Disable ionospheric delay for spacecraft scenario\n"
+		"  -p               Disable path loss and hold power level constant\n",
 		((double)USER_MOTION_SIZE)/10.0, 
 		TX_VGA1,
 		NORTH_KEY, SOUTH_KEY, EAST_KEY, WEST_KEY);
@@ -223,8 +224,9 @@ int main(int argc, char *argv[])
 	s.opt.interactive = FALSE;
 	s.opt.timeoverwrite = FALSE;
 	s.opt.iono_enable = TRUE;
+	s.opt.path_loss_enable = TRUE;
 
-	while ((result=getopt(argc,argv,"e:u:g:l:T:t:d:x:a:iI"))!=-1)
+	while ((result=getopt(argc,argv,"e:u:g:l:T:t:d:x:a:iIp"))!=-1)
 	{
 		switch (result)
 		{
@@ -303,11 +305,15 @@ int main(int argc, char *argv[])
 				txvga1 = BLADERF_TXVGA1_GAIN_MIN;
 			else if (txvga1>BLADERF_TXVGA1_GAIN_MAX)
 				txvga1 = BLADERF_TXVGA1_GAIN_MAX;
+			break;
 		case 'i':
 			s.opt.interactive = TRUE;
 			break;
 		case 'I':
 			s.opt.iono_enable = FALSE; // Disable ionospheric correction
+			break;
+		case 'p':
+			s.opt.path_loss_enable = FALSE; // Disable path loss
 			break;
 		case ':':
 		case '?':

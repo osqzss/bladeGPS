@@ -58,6 +58,7 @@ typedef struct {
 	int interactive;
 	int timeoverwrite;
 	int iono_enable;
+	int path_loss_enable;
 } option_t;
 
 typedef struct {

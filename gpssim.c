@@ -2319,7 +2319,10 @@ void *gps_task(void *arg)
 				ant_gain = ant_pat[ibs];
 
 				// Signal gain
-				gain[i] = (int)(path_loss*ant_gain*128.0); // scaled by 2^7
+				if (s->opt.path_loss_enable == TRUE)
+					gain[i] = (int)(path_loss*ant_gain*128.0); // scaled by 2^7
+				else
+					gain[i] = 128; // hold the power level constant
 			}
 		}
 
