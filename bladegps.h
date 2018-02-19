@@ -6,6 +6,7 @@
 #include <libbladeRF.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 #ifdef _WIN32
 // To avoid conflict between time.h and pthread.h on Windows
 #define HAVE_STRUCT_TIMESPEC

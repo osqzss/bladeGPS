@@ -9,14 +9,17 @@
 #include <omp.h>
 #ifdef _WIN32
 #include "getopt.h"
+#include <conio.h>
 #else
 #include <unistd.h>
+// For _kbhit() and _getchar() on Linux
+#include <termios.h>
+#include <fcntl.h>
 #endif
 
 #include "gpssim.h"
 #ifdef BLADE_GPS
 #include "bladegps.h"
-#include <conio.h>
 #endif
 
 int sinTable512[] = {
@@ -1641,6 +1644,55 @@ int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t 
 	return(nsat);
 }
 
+#ifndef _WIN32
+int _kbhit(void)
+{
+    struct termios oldt, newt;
+    int ch;
+    int oldf;
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO | ECHOE);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+    ch = getchar();
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+    if (ch != EOF) 
+    {
+        ungetc(ch, stdin);
+        return 1;
+    }
+
+    return 0;
+}
+
+int _getch( ) 
+{
+  struct termios oldt, newt;
+  int ch;
+  
+  tcgetattr( STDIN_FILENO, &oldt );
+  newt = oldt;
+  newt.c_lflag &= ~( ICANON | ECHO );
+  tcsetattr( STDIN_FILENO, TCSANOW, &newt );
+  
+  ch = getchar();
+  // To Do: How to clear input buffer?
+  fflush(stdin);
+  fseek(stdin,0,SEEK_END);
+  
+  tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
+  
+  return ch;
+}
+#endif
+
 #ifndef BLADE_GPS
 void usage(void)
 {
@@ -1685,7 +1737,9 @@ void *gps_task(void *arg)
 	int ip,qp;
 	int iTable;
 	short *iq_buff = NULL;
+#ifndef BLADE_GPS
 	signed char *iq8_buff = NULL;
+#endif
 
 	gpstime_t grx;
 	double delt;
@@ -1703,7 +1757,9 @@ void *gps_task(void *arg)
 	char navfile[MAX_CHAR];
 
 	int iq_buff_size;
+#ifndef BLADE_GPS
 	int data_format;
+#endif
 
 	int gain[MAX_CHAN];
 	double path_loss;
@@ -1858,7 +1914,6 @@ void *gps_task(void *arg)
 #else
 	strcpy(navfile, s->opt.navfile);
 	strcpy(umfile, s->opt.umfile);
-	data_format = SC16;
 	
 	staticLocationMode = s->opt.staticLocationMode;
 	llh[0] = s->opt.llh[0];
@@ -1884,7 +1939,9 @@ void *gps_task(void *arg)
 
 	ionoutc.enable = s->opt.iono_enable;
 #endif
-
+	gmin = g0;
+	gmax = g0;
+	
 	////////////////////////////////////////////////////////////
 	// Receiver position
 	////////////////////////////////////////////////////////////
@@ -2225,6 +2282,7 @@ void *gps_task(void *arg)
 			if(_kbhit())
 			{
 				key = _getch();
+				//key = getchar();
 				switch (key)
 				{
 				case NORTH_KEY:

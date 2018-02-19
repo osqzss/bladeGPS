@@ -3,7 +3,7 @@
 #include "bladegps.h"
 
 // for _getch used in Windows runtime.
-#ifdef WIN32
+#ifdef _WIN32
 #include <conio.h>
 #include "getopt.h"
 #else
