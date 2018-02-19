@@ -1,7 +1,7 @@
 # bladeGPS
 
 Very crude experimental implimentation of [gps-sdr-sim](https://github.com/osqzss/gps-sdr-sim) for real-time signal generation.
-The code works with bladeRF and has been tested on Windows only.
+The code works with bladeRF and has been tested on Windows 10 and Ubuntu 17.10.
 
 ```
 Usage: bladegps [options]
@@ -47,7 +47,7 @@ After a successful build, you can find the executable in the __Release__ folder.
 * __libusb-1.0.dll__
 * __pthreadVC2.dll__
 
-### Build on Linux (Untested)
+### Build on Linux (Ubuntu 17.10)
 
 1. Retrive the bladeRF source in a directory next to the current directory.
 
