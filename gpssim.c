@@ -12,9 +12,9 @@
 #include <conio.h>
 #else
 #include <unistd.h>
-// For _kbhit() and _getchar() on Linux
+// For _kbhit() and _getch() on Linux
 #include <termios.h>
-#include <fcntl.h>
+#include <stdio_ext.h> // for __fpurge()
 #endif
 
 #include "gpssim.h"
@@ -1645,51 +1645,45 @@ int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t 
 }
 
 #ifndef _WIN32
-int _kbhit(void)
+void changemode(int dir)
 {
-    struct termios oldt, newt;
-    int ch;
-    int oldf;
-
-    tcgetattr(STDIN_FILENO, &oldt);
+  static struct termios oldt, newt;
+ 
+  if ( dir == 1 )
+  {
+    tcgetattr( STDIN_FILENO, &oldt);
     newt = oldt;
-    newt.c_lflag &= ~(ICANON | ECHO | ECHOE);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
-
-    ch = getchar();
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    fcntl(STDIN_FILENO, F_SETFL, oldf);
-
-    if (ch != EOF) 
-    {
-        ungetc(ch, stdin);
-        return 1;
-    }
-
-    return 0;
+    newt.c_lflag &= ~( ICANON | ECHO ); // non-canonical mode & no echo
+    tcsetattr( STDIN_FILENO, TCSANOW, &newt);
+  }
+  else
+    tcsetattr( STDIN_FILENO, TCSANOW, &oldt);
+}
+ 
+int _kbhit (void)
+{
+  struct timeval tv;
+  fd_set rdfs;
+ 
+  tv.tv_sec = 0;
+  tv.tv_usec = 0;
+ 
+  FD_ZERO(&rdfs);
+  FD_SET (STDIN_FILENO, &rdfs);
+ 
+  select(STDIN_FILENO+1, &rdfs, NULL, NULL, &tv);
+  return FD_ISSET(STDIN_FILENO, &rdfs);
+ 
 }
 
-int _getch( ) 
+int _getch()
 {
-  struct termios oldt, newt;
-  int ch;
-  
-  tcgetattr( STDIN_FILENO, &oldt );
-  newt = oldt;
-  newt.c_lflag &= ~( ICANON | ECHO );
-  tcsetattr( STDIN_FILENO, TCSANOW, &newt );
-  
-  ch = getchar();
-  // To Do: How to clear input buffer?
-  fflush(stdin);
-  fseek(stdin,0,SEEK_END);
-  
-  tcsetattr( STDIN_FILENO, TCSANOW, &oldt );
-  
-  return ch;
+	int ch;
+	
+	ch = getchar();
+	__fpurge(stdin); // Clear STDIN buffer
+	
+	return ch;
 }
 #endif
 
@@ -2264,6 +2258,9 @@ void *gps_task(void *arg)
 	////////////////////////////////////////////////////////////
 	// Generate baseband signals
 	////////////////////////////////////////////////////////////
+#ifndef _WIN32	
+	changemode(1); // non-canonical mode & no echo
+#endif
 
 #ifndef BLADE_GPS
 	tstart = clock();
@@ -2275,31 +2272,38 @@ void *gps_task(void *arg)
 	for (iumd=1; iumd<numd; iumd++)
 	{
 #ifdef BLADE_GPS
+		key = 0; // Initialize key input
+		
+		// Press 'q' to abort
+		if (_kbhit())
+		{
+			key = _getch();
+			
+			if (key == 'q' || key == 'Q')
+				goto abort;
+		}
+
+		// Interactive mode
 		if (interactive)
 		{
 			key_direction = UNDEF;
 
-			if(_kbhit())
+			switch (key)
 			{
-				key = _getch();
-				//key = getchar();
-				switch (key)
-				{
-				case NORTH_KEY:
-					key_direction = NORTH;
-					break;
-				case SOUTH_KEY:
-					key_direction = SOUTH;
-					break;
-				case EAST_KEY:
-					key_direction = EAST;
-					break;
-				case WEST_KEY:
-					key_direction = WEST;
-					break;
-				default:
-					break;
-				}
+			case NORTH_KEY:
+				key_direction = NORTH;
+				break;
+			case SOUTH_KEY:
+				key_direction = SOUTH;
+				break;
+			case EAST_KEY:
+				key_direction = EAST;
+				break;
+			case WEST_KEY:
+				key_direction = WEST;
+				break;
+			default:
+				break;
 			}
 
 			if ((key_direction!=UNDEF)&&(direction==key_direction))
@@ -2569,6 +2573,11 @@ void *gps_task(void *arg)
 		printf("\rTime into run = %4.1f", subGpsTime(grx, g0));
 		fflush(stdout);
 	}
+	
+abort:
+#ifndef _WIN32
+	changemode(0);
+#endif
 
 	// Done!
 	s->finished = true;

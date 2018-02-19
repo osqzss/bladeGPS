@@ -503,7 +503,7 @@ int main(int argc, char *argv[])
 
 	// Running...
 	printf("Running...\n");
-	printf("Press 'Ctrl+C' to abort.\n");
+	printf("Press 'q' to abort.\n");
 
 	// Wainting for TX task to complete.
 	pthread_join(s.tx.thread, NULL);
