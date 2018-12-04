@@ -18,9 +18,7 @@
 #endif
 
 #include "gpssim.h"
-#ifdef BLADE_GPS
 #include "bladegps.h"
-#endif
 
 int sinTable512[] = {
 	   2,   5,   8,  11,  14,  17,  20,  23,  26,  29,  32,  35,  38,  41,  44,  47,
@@ -500,7 +498,10 @@ void satpos(ephem_t eph, gpstime_t g, double *pos, double *vel, double *clk)
  *  \param[in] eph Ephemeris of given SV
  *  \param[out] sbf Array of five sub-frames, 10 long words each
  */
-void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, unsigned long sbf[5][N_DWRD_SBF])
+
+#define EMPTY_WORD 0xaaaaaaaaUL
+
+void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, const almanac_t *alm, unsigned long sbf[N_SBF_PAGE][N_DWRD_SBF])
 {
 	unsigned long wn;
 	unsigned long toe;
@@ -542,6 +543,12 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, unsigned long sbf[5][N_
 	unsigned long tot,wnt,wnlsf,dn;
 	unsigned long sbf4_page18_svId = 56UL;
 
+	int sv,i;
+	unsigned long svId;
+	signed long deli; // Relative to i0 = 0.30 semicircles
+	unsigned long sbf4_svId[25] = { 57, 0, 0, 0, 0, 57, 0, 0, 0, 0, 57, 62, 52, 53, 54, 57, 55, 56, 58, 59, 57, 60, 61, 62, 63 };
+	unsigned long sbf5_svId[25] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 51 };
+
 	// FIXED: This has to be the "transmission" week number, not for the ephemeris reference time
 	//wn = (unsigned long)(eph.toe.week%1024);
 	wn = 0UL;
@@ -568,9 +575,6 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, unsigned long sbf[5][N_
 	af1 = (long)(eph.af1/POW2_M43);
 	af2 = (long)(eph.af2/POW2_M55);
 	tgd = (long)(eph.tgd/POW2_M31);
-
-	wna = (unsigned long)(eph.toe.week%256);
-	toa = (unsigned long)(eph.toe.sec/4096.0);
 
 	alpha0 = (signed long)round(ionoutc.alpha0/POW2_M30);
 	alpha1 = (signed long)round(ionoutc.alpha1/POW2_M27);
@@ -628,47 +632,156 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, unsigned long sbf[5][N_
 	sbf[2][8] = (omgdot&0xFFFFFFUL)<<6;
 	sbf[2][9] = ((iode&0xFFUL)<<22) | ((idot&0x3FFFUL)<<8);
 
-	if (ionoutc.vflg==TRUE)
+	// Empty all the pages of subframes 4 and 5
+	for (i = 0; i < 25; i++)
 	{
-		// Subframe 4, page 18
-		sbf[3][0] = 0x8B0000UL<<6;
-		sbf[3][1] = 0x4UL<<8;
-		sbf[3][2] = (dataId<<28) | (sbf4_page18_svId<<22) | ((alpha0&0xFFUL)<<14) | ((alpha1&0xFFUL)<<6);
-		sbf[3][3] = ((alpha2&0xFFUL)<<22) | ((alpha3&0xFFUL)<<14) | ((beta0&0xFFUL)<<6);
-		sbf[3][4] = ((beta1&0xFFUL)<<22) | ((beta2&0xFFUL)<<14) | ((beta3&0xFFUL)<<6);
-		sbf[3][5] = (A1&0xFFFFFFUL)<<6;
-		sbf[3][6] = ((A0>>8)&0xFFFFFFUL)<<6;
-		sbf[3][7] = ((A0&0xFFUL)<<22) | ((tot&0xFFUL)<<14) | ((wnt&0xFFUL)<<6);
-		sbf[3][8] = ((dtls&0xFFUL)<<22) | ((wnlsf&0xFFUL)<<14) | ((dn&0xFFUL)<<6);
-		sbf[3][9] = (dtlsf&0xFFUL)<<22;
-	
-	}
-	else
-	{
-		// Subframe 4, page 25
-		sbf[3][0] = 0x8B0000UL<<6;
-		sbf[3][1] = 0x4UL<<8;
-		sbf[3][2] = (dataId<<28) | (sbf4_page25_svId<<22);
-		sbf[3][3] = 0UL;
-		sbf[3][4] = 0UL;
-		sbf[3][5] = 0UL;
-		sbf[3][6] = 0UL;
-		sbf[3][7] = 0UL;
-		sbf[3][8] = 0UL;
-		sbf[3][9] = 0UL;
+		svId = 0UL; // Dummy SV
+		//svId = sbf4_svId[i];
+
+		sbf[3 + i * 2][0] = 0x8B0000UL << 6; // Preamble for TLM
+		sbf[3 + i * 2][1] = 0x4UL << 8; // Subframe ID for HOW
+		sbf[3 + i * 2][2] = (dataId << 28) | (svId << 22) | ((EMPTY_WORD & 0xFFFFUL) << 6);
+		sbf[3 + i * 2][3] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[3 + i * 2][4] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[3 + i * 2][5] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[3 + i * 2][6] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[3 + i * 2][7] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[3 + i * 2][8] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[3 + i * 2][9] = (EMPTY_WORD & 0x3FFFFFUL) << 8;
+
+		//svId = sbf5_svId[i];
+
+		sbf[4 + i * 2][0] = 0x8B0000UL << 6; // Preamble for TLM
+		sbf[4 + i * 2][1] = 0x5UL << 8; // Subframe ID for HOW
+		sbf[4 + i * 2][2] = (dataId << 28) | (svId << 22) | ((EMPTY_WORD & 0xFFFFUL) << 6);
+		sbf[4 + i * 2][3] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[4 + i * 2][4] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[4 + i * 2][5] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[4 + i * 2][6] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[4 + i * 2][7] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[4 + i * 2][8] = (EMPTY_WORD & 0xFFFFFFUL) << 6;
+		sbf[4 + i * 2][9] = (EMPTY_WORD & 0x3FFFFFUL) << 8;
 	}
 
-	// Subframe 5, page 25
-	sbf[4][0] = 0x8B0000UL<<6;
-	sbf[4][1] = 0x5UL<<8;
-	sbf[4][2] = (dataId<<28) | (sbf5_page25_svId<<22) | ((toa&0xFFUL)<<14) | ((wna&0xFFUL)<<6);
-	sbf[4][3] = 0UL;
-	sbf[4][4] = 0UL;
-	sbf[4][5] = 0UL;
-	sbf[4][6] = 0UL;
-	sbf[4][7] = 0UL;
-	sbf[4][8] = 0UL;
-	sbf[4][9] = 0UL;
+	// Subframe 4, pages 2-5 and 7-10: almanac data for PRN 25 through 32
+	for (sv = 24; sv < MAX_SAT; sv++)
+	{
+		if (sv >= 24 && sv <= 27) // PRN 25-28
+			i = sv - 23; // Pages 2-5 (i = 1-4)
+		else if (sv >= 28 && sv < MAX_SAT) // PRN 29-32
+			i = sv - 22; // Page 7-10 (i = 6-9)
+
+		if (alm[sv].id != 0)
+		{
+			svId = (unsigned long)(sv + 1);
+			ecc = (unsigned long)(alm[sv].ecc / POW2_M21);
+			toa = (unsigned long)(alm[sv].toa.sec / 4096.0);
+			deli = (signed long)((alm[sv].inc0 / PI - 0.3) / POW2_M19);
+			omgdot = (signed long)(alm[sv].omgdot / PI / POW2_M38);
+			sqrta = (unsigned long)(alm[sv].sqrta / POW2_M11);
+			omg0 = (signed long)(alm[sv].omg0 / PI / POW2_M23);
+			aop = (signed long)(alm[sv].aop / PI / POW2_M23);
+			m0 = (signed long)(alm[sv].m0 / PI / POW2_M23);
+			af0 = (signed long)(alm[sv].af0 / POW2_M20);
+			af1 = (signed long)(alm[sv].af1 / POW2_M38);
+
+			sbf[3 + i * 2][0] = 0x8B0000UL << 6; // Preamble for TLM
+			sbf[3 + i * 2][1] = 0x4UL << 8; // Subframe ID for HOW
+			sbf[3 + i * 2][2] = (dataId << 28) | (svId << 22) | ((ecc & 0xFFFFUL) << 6);
+			sbf[3 + i * 2][3] = ((toa & 0xFFUL) << 22) | ((deli & 0xFFFFUL) << 6);
+			sbf[3 + i * 2][4] = ((omgdot & 0xFFFFUL) << 14); // SV HEALTH = 000 (ALL DATA OK)
+			sbf[3 + i * 2][5] = ((sqrta & 0xFFFFFFUL) << 6);
+			sbf[3 + i * 2][6] = ((omg0 & 0xFFFFFFUL) << 6);
+			sbf[3 + i * 2][7] = ((aop & 0xFFFFFFUL) << 6);
+			sbf[3 + i * 2][8] = ((m0 & 0xFFFFFFUL) << 6);
+			sbf[3 + i * 2][9] = ((af0 & 0x7F8UL) << 19) | ((af1 & 0x7FFUL) << 11) | ((af0 & 0x7UL) << 8);
+		}
+	}
+
+	// Subframe 4, page 18: ionospheric and UTC data
+	if (ionoutc.vflg==TRUE)
+	{
+		sbf[3 + 17 * 2][0] = 0x8B0000UL<<6;
+		sbf[3 + 17 * 2][1] = 0x4UL<<8;
+		sbf[3 + 17 * 2][2] = (dataId<<28) | (sbf4_page18_svId<<22) | ((alpha0&0xFFUL)<<14) | ((alpha1&0xFFUL)<<6);
+		sbf[3 + 17 * 2][3] = ((alpha2&0xFFUL)<<22) | ((alpha3&0xFFUL)<<14) | ((beta0&0xFFUL)<<6);
+		sbf[3 + 17 * 2][4] = ((beta1&0xFFUL)<<22) | ((beta2&0xFFUL)<<14) | ((beta3&0xFFUL)<<6);
+		sbf[3 + 17 * 2][5] = (A1&0xFFFFFFUL)<<6;
+		sbf[3 + 17 * 2][6] = ((A0>>8)&0xFFFFFFUL)<<6;
+		sbf[3 + 17 * 2][7] = ((A0&0xFFUL)<<22) | ((tot&0xFFUL)<<14) | ((wnt&0xFFUL)<<6);
+		sbf[3 + 17 * 2][8] = ((dtls&0xFFUL)<<22) | ((wnlsf&0xFFUL)<<14) | ((dn&0xFFUL)<<6);
+		sbf[3 + 17 * 2][9] = (dtlsf&0xFFUL)<<22;
+	
+	}
+
+	// Subframe 4, page 25: SV health data for PRN 25 through 32
+	sbf[3 + 24 * 2][0] = 0x8B0000UL<<6;
+	sbf[3 + 24 * 2][1] = 0x4UL<<8;
+	sbf[3 + 24 * 2][2] = (dataId<<28) | (sbf4_page25_svId<<22);
+	sbf[3 + 24 * 2][3] = 0UL;
+	sbf[3 + 24 * 2][4] = 0UL;
+	sbf[3 + 24 * 2][5] = 0UL;
+	sbf[3 + 24 * 2][6] = 0UL;
+	sbf[3 + 24 * 2][7] = 0UL;
+	sbf[3 + 24 * 2][8] = 0UL;
+	sbf[3 + 24 * 2][9] = 0UL;
+
+	// Subframe 5, page 1-24: almanac data for PRN 1 through 24
+	for (sv = 0; sv < 24; sv++)
+	{
+		i = sv;
+
+		if (alm[sv].id != 0)
+		{
+			svId = (unsigned long)(sv + 1);
+			ecc = (unsigned long)(alm[sv].ecc / POW2_M21);
+			toa = (unsigned long)(alm[sv].toa.sec / 4096.0);
+			deli = (signed long)((alm[sv].inc0 / PI - 0.3) / POW2_M19);
+			omgdot = (signed long)(alm[sv].omgdot / PI / POW2_M38);
+			sqrta = (unsigned long)(alm[sv].sqrta / POW2_M11);
+			omg0 = (signed long)(alm[sv].omg0 / PI / POW2_M23);
+			aop = (signed long)(alm[sv].aop / PI / POW2_M23);
+			m0 = (signed long)(alm[sv].m0 / PI / POW2_M23);
+			af0 = (signed long)(alm[sv].af0 / POW2_M20);
+			af1 = (signed long)(alm[sv].af1 / POW2_M38);
+
+			sbf[4 + i * 2][0] = 0x8B0000UL << 6; // Preamble
+			sbf[4 + i * 2][1] = 0x5UL << 8; // Subframe ID
+			sbf[4 + i * 2][2] = (dataId << 28) | (svId << 22) | ((ecc & 0xFFFFUL) << 6);
+			sbf[4 + i * 2][3] = ((toa & 0xFFUL) << 22) | ((deli & 0xFFFFUL) << 6);
+			sbf[4 + i * 2][4] = ((omgdot & 0xFFFFUL) << 14); // SV HEALTH = 000 (ALL DATA OK)
+			sbf[4 + i * 2][5] = ((sqrta & 0xFFFFFFUL) << 6);
+			sbf[4 + i * 2][6] = ((omg0 & 0xFFFFFFUL) << 6);
+			sbf[4 + i * 2][7] = ((aop & 0xFFFFFFUL) << 6);
+			sbf[4 + i * 2][8] = ((m0 & 0xFFFFFFUL) << 6);
+			sbf[4 + i * 2][9] = ((af0 & 0x7F8UL) << 19) | ((af1 & 0x7FFUL) << 11) | ((af0 & 0x7UL) << 8);
+		}
+	}
+
+	// Subframe 5, page 25: SV health data for PRN 1 through 24
+	wna = (unsigned long)(eph.toe.week % 256);
+	toa = (unsigned long)(eph.toe.sec / 4096.0);
+
+	for (sv = 0; sv < MAX_SAT; sv++)
+	{
+		if (alm[sv].id != 0) // Valid almanac is availabe
+		{
+			wna = (unsigned long)(alm[sv].toa.week % 256);
+			toa = (unsigned long)(alm[sv].toa.sec / 4096.0);
+			break;
+		}
+	}
+
+	sbf[4 + 24 * 2][0] = 0x8B0000UL<<6;
+	sbf[4 + 24 * 2][1] = 0x5UL<<8;
+	sbf[4 + 24 * 2][2] = (dataId<<28) | (sbf5_page25_svId<<22) | ((toa&0xFFUL)<<14) | ((wna&0xFFUL)<<6);
+	sbf[4 + 24 * 2][3] = 0UL;
+	sbf[4 + 24 * 2][4] = 0UL;
+	sbf[4 + 24 * 2][5] = 0UL;
+	sbf[4 + 24 * 2][6] = 0UL;
+	sbf[4 + 24 * 2][7] = 0UL;
+	sbf[4 + 24 * 2][8] = 0UL;
+	sbf[4 + 24 * 2][9] = 0UL;
 
 	return;
 }
@@ -817,6 +930,123 @@ gpstime_t incGpsTime(gpstime_t g0, double dt)
 	}
 
 	return(g1);
+}
+
+int readAlmanac(almanac_t alm[MAX_SAT], const char *fname)
+{
+	FILE *fp;
+	int sv;
+
+	char str[MAX_CHAR];
+	int ialm = 0;
+
+	// Clear SV IDs
+	for (sv = 0; sv < MAX_SAT; sv++)
+		alm[sv].id = 0; // Idle satellite
+
+	// Open almanac file
+	if (NULL == (fp = fopen(fname, "rt")))
+		return(-1);
+
+	// Read almanac file
+	while (1)
+	{
+		if (NULL == fgets(str, MAX_CHAR, fp))
+			break;
+
+		if (strlen(str) < 25)
+			continue; // Skip empty line
+
+		if (str[0] == '*')
+		{
+			// ID
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+			
+			sv = atoi(str + 26) - 1;
+			
+			if (sv<0 || sv>MAX_SAT)
+				break;
+
+			// Health
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].health = atoi(str + 26);
+
+			// Eccentricity
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].ecc = atof(str + 26);
+
+			// Time of Applicability(s)
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].toa.sec = atof(str + 26);
+
+			// Orbital Inclination(rad)
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].inc0 = atof(str + 26);
+
+			// Rate of Right Ascen(r/s)
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].omgdot = atof(str + 26);
+
+			// SQRT(A)  (m 1 / 2)
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].sqrta = atof(str + 26);
+
+			// Right Ascen at Week(rad)
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].omg0 = atof(str + 26);
+
+			// Argument of Perigee(rad)
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].aop = atof(str + 26);
+
+			// Mean Anom(rad)
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].m0 = atof(str + 26);
+
+			// Af0(s)
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].af0 = atof(str + 26);
+
+			// Af1(s/s)
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].af1 = atof(str + 26);
+
+			// Week
+			if (NULL == fgets(str, MAX_CHAR, fp))
+				break;
+
+			alm[sv].toa.week = atoi(str + 26) + 1024; // GPS week rollover
+
+			// Valid almanac
+			alm[sv].id = sv + 1;
+			ialm++;
+		}
+	}
+
+	return(ialm); // Number of valid almanac
 }
 
 /*! \brief Read Ephemersi data from the RINEX Navigation file */
@@ -1480,13 +1710,14 @@ int generateNavMsg(gpstime_t g, channel_t *chan, int init)
 	wn = (unsigned long)(g0.week%1024);
 	tow = ((unsigned long)g0.sec)/6UL;
 
-	if (init==1) // Initialize subframe 5
+	// Initialize the subframe 5
+	if (init==1)
 	{
 		prevwrd = 0UL;
 
 		for (iwrd=0; iwrd<N_DWRD_SBF; iwrd++)
 		{
-			sbfwrd = chan->sbf[4][iwrd];
+			sbfwrd = chan->sbf[4 + chan->ipage * 2][iwrd];
 
 			// Add TOW-count message into HOW
 			if (iwrd==1)
@@ -1500,7 +1731,7 @@ int generateNavMsg(gpstime_t g, channel_t *chan, int init)
 			prevwrd = chan->dwrd[iwrd];
 		}
 	}
-	else // Save subframe 5
+	else
 	{
 		for (iwrd=0; iwrd<N_DWRD_SBF; iwrd++)
 		{
@@ -1518,13 +1749,19 @@ int generateNavMsg(gpstime_t g, channel_t *chan, int init)
 		*/
 	}
 
+	// Generate subframe words
 	for (isbf=0; isbf<N_SBF; isbf++)
 	{
 		tow++;
 
 		for (iwrd=0; iwrd<N_DWRD_SBF; iwrd++)
 		{
-			sbfwrd = chan->sbf[isbf][iwrd];
+			if (isbf < 3) // Subframes 1-3
+				sbfwrd = chan->sbf[isbf][iwrd];
+			else if (isbf == 3) // Subframe 4
+				sbfwrd = chan->sbf[3 + chan->ipage * 2][iwrd];
+			else // Subframe 5 
+				sbfwrd = chan->sbf[4 + chan->ipage * 2][iwrd];
 
 			// Add transmission week number to Subframe 1
 			if ((isbf==0)&&(iwrd==2))
@@ -1542,6 +1779,11 @@ int generateNavMsg(gpstime_t g, channel_t *chan, int init)
 			prevwrd = chan->dwrd[(isbf+1)*N_DWRD_SBF+iwrd];
 		}
 	}
+
+	// Move to the next pages
+	chan->ipage++;
+	if (chan->ipage >= 25)
+		chan->ipage = 0;
 
 	return(1);
 }
@@ -1569,7 +1811,7 @@ int checkSatVisibility(ephem_t eph, gpstime_t g, double *xyz, double elvMask, do
 	return (0); // Invisible
 }
 
-int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t grx, double *xyz, double elvMask)
+int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, almanac_t *alm, gpstime_t grx, double *xyz, double elvMask)
 {
 	int nsat=0;
 	int i,sv;
@@ -1580,6 +1822,19 @@ int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t 
 	double r_ref,r_xyz;
 	double phase_ini;
 
+	int ipage = 0; // Initial page count
+
+	// Find current page number
+	for (i = 0; i < MAX_CHAN; i++)
+	{
+		if (chan[i].prn != 0)
+		{
+			ipage = chan[i].ipage;
+			break;
+		}
+	}
+
+	// Allocate channel
 	for (sv=0; sv<MAX_SAT; sv++)
 	{
 		if(checkSatVisibility(eph[sv], grx, xyz, 0.0, azel)==1)
@@ -1595,6 +1850,7 @@ int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t 
 					{
 						// Initialize channel
 						chan[i].prn = sv+1;
+						chan[i].ipage = ipage;
 						chan[i].azel[0] = azel[0];
 						chan[i].azel[1] = azel[1];
 
@@ -1602,7 +1858,7 @@ int allocateChannel(channel_t *chan, ephem_t *eph, ionoutc_t ionoutc, gpstime_t 
 						codegen(chan[i].ca, chan[i].prn);
 
 						// Generate subframe
-						eph2sbf(eph[sv], ionoutc, chan[i].sbf);
+						eph2sbf(eph[sv], ionoutc, alm, chan[i].sbf);
 
 						// Generate navigation message
 						generateNavMsg(grx, &chan[i], 1);
@@ -1687,35 +1943,9 @@ int _getch()
 }
 #endif
 
-#ifndef BLADE_GPS
-void usage(void)
-{
-	printf("Usage: gps-sdr-sim [options]\n"
-		"Options:\n"
-		"  -e <gps_nav>     RINEX navigation file for GPS ephemerides (required)\n"
-		"  -u <user_motion> User motion file (dynamic mode)\n"
-		"  -g <nmea_gga>    NMEA GGA stream (dynamic mode)\n"
-		"  -l <location>    Lat,Lon,Hgt (static mode) e.g. 30.286502,120.032669,100\n"
-		"  -t <date,time>   Scenario start time YYYY/MM/DD,hh:mm:ss\n"
-		"  -T <date,time>   Overwrite TOC and TOE to scenario start time\n"
-		"  -d <duration>    Duration [sec] (max: %.0f)\n"
-		"  -o <output>      I/Q sampling data file (default: gpssim.bin)\n"
-		"  -s <frequency>   Sampling frequency [Hz] (default: 2600000)\n"
-		"  -b <iq_bits>     I/Q data format [1/8/16] (default: 16)\n"
-		"  -i               Disable ionospheric delay for spacecraft scenario\n"
-		"  -v               Show details about simulated channels\n",
-		((double)USER_MOTION_SIZE)/10.0);
-}
-#endif
-
-#ifndef BLADE_GPS
-int main(int argc, char *argv[])
-{
-#else
 void *gps_task(void *arg)
 {
 	sim_t *s = (sim_t *)arg;
-#endif
 
 	int sv;
 	int neph,ieph;
@@ -1731,9 +1961,6 @@ void *gps_task(void *arg)
 	int ip,qp;
 	int iTable;
 	short *iq_buff = NULL;
-#ifndef BLADE_GPS
-	signed char *iq8_buff = NULL;
-#endif
 
 	gpstime_t grx;
 	double delt;
@@ -1751,9 +1978,6 @@ void *gps_task(void *arg)
 	char navfile[MAX_CHAR];
 
 	int iq_buff_size;
-#ifndef BLADE_GPS
-	int data_format;
-#endif
 
 	int gain[MAX_CHAN];
 	double path_loss;
@@ -1774,14 +1998,10 @@ void *gps_task(void *arg)
 	
 	ionoutc_t ionoutc;
 
-#ifndef BLADE_GPS
-	clock_t tstart,tend;
-	FILE *fp;
-	char outfile[MAX_CHAR];
-	double samp_freq;
-	double duration;
-	int result;
-#else
+	char almfile[MAX_CHAR];
+	almanac_t alm[MAX_SAT];
+	int nalm;
+
 	int interactive = FALSE;
 	int key;
 	int key_direction;
@@ -1789,125 +2009,14 @@ void *gps_task(void *arg)
 	double velocity = 0.0;
 	double tmat[3][3];
 	double neu[3];
-#endif
 
 	////////////////////////////////////////////////////////////
 	// Read options
 	////////////////////////////////////////////////////////////
 
-#ifndef BLADE_GPS
-	// Default options
-	navfile[0] = 0;
-	umfile[0] = 0;
-	strcpy(outfile, "gpssim.bin");
-	samp_freq = 2.6e6;
-	data_format = SC16;
-	g0.week = -1; // Invalid start time
-	iduration = USER_MOTION_SIZE;
-	verb = 0;
-
-	if (argc<3)
-	{
-		usage();
-		exit(1);
-	}
-
-	while ((result=getopt(argc,argv,"e:u:g:l:o:s:b:t:d:v"))!=-1)
-	{
-		switch (result)
-		{
-		case 'e':
-			strcpy(navfile, optarg);
-			break;
-		case 'u':
-			strcpy(umfile, optarg);
-			nmeaGGA = FALSE;
-			break;
-		case 'g':
-			strcpy(umfile, optarg);
-			nmeaGGA = TRUE;
-			break;
-		case 'l':
-			// Static geodetic coordinates input mode
-			// Added by scateu@gmail.com
-			staticLocationMode = TRUE;
-			sscanf(optarg,"%lf,%lf,%lf",&llh[0],&llh[1],&llh[2]);
-			llh[0] = llh[0] / R2D; // convert to RAD
-			llh[1] = llh[1] / R2D; // convert to RAD
-			break;
-		case 'o':
-			strcpy(outfile, optarg);
-			break;
-		case 's':
-			samp_freq = atof(optarg);
-			if (samp_freq<1.0e6)
-			{
-				printf("ERROR: Invalid sampling frequency.\n");
-				exit(1);
-			}
-			break;
-		case 'b':
-			data_format = atoi(optarg);
-			if (data_format!=SC01 && data_format!=SC08 && data_format!=SC16)
-			{
-				printf("ERROR: Invalid I/Q data format.\n");
-				exit(1);
-			}
-			break;
-		case 't':
-			sscanf(optarg, "%d/%d/%d,%d:%d:%lf", &t0.y, &t0.m, &t0.d, &t0.hh, &t0.mm, &t0.sec);
-			if (t0.y<=1980 || t0.m<1 || t0.m>12 || t0.d<1 || t0.d>31 ||
-				t0.hh<0 || t0.hh>23 || t0.mm<0 || t0.mm>59 || t0.sec<0.0 || t0.sec>=60.0)
-			{
-				printf("ERROR: Invalid date and time.\n");
-				exit(1);
-			}
-			t0.sec = floor(t0.sec);
-			date2gps(&t0, &g0);
-			break;
-		case 'd':
-			duration = atof(optarg);
-			if (duration<0.0 || duration>((double)USER_MOTION_SIZE)/10.0)
-			{
-				printf("ERROR: Invalid duration.\n");
-				exit(1);
-			}
-			iduration = (int)(duration*10.0+0.5);
-			break;
-		case 'v':
-			verb = 1;
-			break;
-		case ':':
-		case '?':
-			usage();
-			exit(1);
-		default:
-			break;
-		}
-	}
-
-	if (navfile[0]==0)
-	{
-		printf("ERROR: GPS ephemeris file is not specified.\n");
-		exit(1);
-	}
-
-	if (umfile[0]==0 && !staticLocationMode)
-	{
-		printf("ERROR: User motion file / NMEA GGA stream is not specified.\n");
-		printf("You may use -l to specify the static location directly.\n");
-		exit(1);
-	}
-
-	// Buffer size	
-	samp_freq = floor(samp_freq/10.0);
-	iq_buff_size = (int)samp_freq; // samples per 0.1sec
-	samp_freq *= 10.0;
-
-	delt = 1.0/samp_freq;
-#else
 	strcpy(navfile, s->opt.navfile);
 	strcpy(umfile, s->opt.umfile);
+	strcpy(almfile, s->opt.almfile);
 	
 	staticLocationMode = s->opt.staticLocationMode;
 	llh[0] = s->opt.llh[0];
@@ -1932,7 +2041,7 @@ void *gps_task(void *arg)
 	timeoverwrite = s->opt.timeoverwrite;
 
 	ionoutc.enable = s->opt.iono_enable;
-#endif
+
 	gmin = g0;
 	gmax = g0;
 	
@@ -1946,11 +2055,7 @@ void *gps_task(void *arg)
 	if (xyz==NULL)
 	{
 		printf("ERROR: Faild to allocate user motion array.\n");
-#ifndef BLADE_GPS
-		exit(1);
-#else
 		goto exit;
-#endif
 	}
 
 	for (i=0; i<USER_MOTION_SIZE; i++)
@@ -1963,11 +2068,7 @@ void *gps_task(void *arg)
 				free(xyz[i]);
 
 			printf("ERROR: Faild to allocate user motion array.\n");
-#ifndef BLADE_GPS
-			exit(1);
-#else
 			goto exit;
-#endif
 		}
 	}
 
@@ -1984,20 +2085,12 @@ void *gps_task(void *arg)
 		if (numd==-1)
 		{
 			printf("ERROR: Failed to open user motion / NMEA GGA file.\n");
-#ifndef BLADE_GPS
-			exit(1);
-#else
 			goto exit;
-#endif
 		}
 		else if (numd==0)
 		{
 			printf("ERROR: Failed to read user motion / NMEA GGA data.\n");
-#ifndef BLADE_GPS
-			exit(1);
-#else
 			goto exit;
-#endif
 		}
 
 		// Set simulation duration
@@ -2021,7 +2114,6 @@ void *gps_task(void *arg)
 		}
 	}
 
-#ifdef BLADE_GPS
 	// Initialize the local tangential matrix for interactive mode
 	ltcmat(llh, tmat);
 	if (interactive)
@@ -2029,7 +2121,6 @@ void *gps_task(void *arg)
 		printf("Enable interactive mode.\n");
 		numd = iduration;
 	}
-#endif
 
 	printf("xyz = %11.1f, %11.1f, %11.1f\n", xyz[0][0], xyz[0][1], xyz[0][2]);
 	printf("llh = %11.6f, %11.6f, %11.1f\n", llh[0]*R2D, llh[1]*R2D, llh[2]);
@@ -2043,11 +2134,7 @@ void *gps_task(void *arg)
 	if (neph==0)
 	{
 		printf("ERROR: No ephemeris available.\n");
-#ifndef BLADE_GPS
-		exit(1);
-#else
 		goto exit;
-#endif
 	}
 
 	if (ionoutc.vflg==TRUE)
@@ -2060,6 +2147,10 @@ void *gps_task(void *arg)
 			ionoutc.A0, ionoutc.A1, ionoutc.tot, ionoutc.wnt);
 		printf("%6d\n", ionoutc.dtls);
 	}
+
+	////////////////////////////////////////////////////////////
+	// Set simulation start time
+	////////////////////////////////////////////////////////////
 
 	for (sv=0; sv<MAX_SAT; sv++) 
 	{
@@ -2127,11 +2218,8 @@ void *gps_task(void *arg)
 				printf("tmax = %4d/%02d/%02d,%02d:%02d:%02.0f (%d:%.0f)\n", 
 					tmax.y, tmax.m, tmax.d, tmax.hh, tmax.mm, tmax.sec,
 					gmax.week, gmax.sec);
-	#ifndef BLADE_GPS
-				exit(1);
-	#else
+
 				goto exit;
-	#endif
 			}
 		}
 	}
@@ -2170,11 +2258,44 @@ void *gps_task(void *arg)
 	if (ieph == -1)
 	{
 		printf("ERROR: No current set of ephemerides has been found.\n");
-#ifndef BLADE_GPS
-		exit(1);
-#else
 		goto exit;
-#endif
+	}
+
+	////////////////////////////////////////////////////////////
+	// Read almanac
+	////////////////////////////////////////////////////////////
+
+	nalm = readAlmanac(alm, almfile);
+
+	if (almfile[0] != 0 && nalm == -1)
+	{
+		printf("ERROR: Invalid almanac file name.\n");
+		goto exit;
+	}
+
+	if (nalm > 0)
+	{
+		if (timeoverwrite == TRUE)
+		{
+			printf("ERROR: Time overwrite cannot be used with almanac option.\n");
+			goto exit;
+		}
+
+		// Check TOA
+		for (sv = 0; sv < MAX_SAT; sv++)
+		{
+			if (alm[sv].id != 0) // Valid almanac
+			{
+				dt = subGpsTime(alm[sv].toa, g0);
+
+				if (dt<(-4.0*SECONDS_IN_WEEK) || dt>(4.0*SECONDS_IN_WEEK))
+				{
+					printf("ERROR: Invalid time of almanac.\n");
+					goto exit;
+				}
+			}
+
+		}
 	}
 
 	////////////////////////////////////////////////////////////
@@ -2187,42 +2308,9 @@ void *gps_task(void *arg)
 	if (iq_buff==NULL)
 	{
 		printf("ERROR: Faild to allocate 16-bit I/Q buffer.\n");
-#ifndef BLADE_GPS
-		exit(1);
-#else
 		goto exit;
-#endif
 	}
 
-#ifndef BLADE_GPS // SC16 for bladeRF
-	if (data_format==SC08)
-	{
-		iq8_buff = calloc(2*iq_buff_size, 1);
-		if (iq8_buff==NULL)
-		{
-			printf("ERROR: Faild to allocate 8-bit I/Q buffer.\n");
-			exit(1);
-		}
-	}
-	else if (data_format==SC01)
-	{
-		iq8_buff = calloc(iq_buff_size/4, 1); // byte = {I0, Q0, I1, Q1, I2, Q2, I3, Q3}
-		if (iq8_buff==NULL)
-		{
-			printf("ERROR: Faild to allocate compressed 1-bit I/Q buffer.\n");
-			exit(1);
-		}
-	}
-#endif
-
-#ifndef BLADE_GPS // No output file
-	// Open output file
-	if (NULL==(fp=fopen(outfile,"wb")))
-	{
-		printf("ERROR: Failed to open output file.\n");
-		exit(1);
-	}
-#endif
 	////////////////////////////////////////////////////////////
 	// Initialize channels
 	////////////////////////////////////////////////////////////
@@ -2239,7 +2327,7 @@ void *gps_task(void *arg)
 	grx = incGpsTime(g0, 0.0);
 
 	// Allocate visible satellites
-	allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[0], elvmask);
+	allocateChannel(chan, eph[ieph], ionoutc, alm, grx, xyz[0], elvmask);
 
 	for(i=0; i<MAX_CHAN; i++)
 	{
@@ -2262,16 +2350,11 @@ void *gps_task(void *arg)
 	changemode(1); // non-canonical mode & no echo
 #endif
 
-#ifndef BLADE_GPS
-	tstart = clock();
-#endif
-
 	// Update receiver time
 	grx = incGpsTime(grx, 0.1);
 
 	for (iumd=1; iumd<numd; iumd++)
 	{
-#ifdef BLADE_GPS
 		key = 0; // Initialize key input
 		
 		// Press 'q' to abort
@@ -2355,7 +2438,7 @@ void *gps_task(void *arg)
 				xyz[iumd][2] += tmat[0][2]*neu[0] + tmat[1][2]*neu[1] + tmat[2][2]*neu[2];
 			}
 		}
-#endif
+
 		for (i=0; i<MAX_CHAN; i++)
 		{
 			if (chan[i].prn>0)
@@ -2452,35 +2535,6 @@ void *gps_task(void *arg)
 			iq_buff[isamp*2+1] = (short)q_acc;
 		}
 
-#ifndef BLADE_GPS
-		if (data_format==SC01)
-		{
-			for (isamp=0; isamp<2*iq_buff_size; isamp++)
-			{
-				if (isamp%8==0)
-					iq8_buff[isamp/8] = 0x00;
-
-				iq8_buff[isamp/8] |= (iq_buff[isamp]>0?0x01:0x00)<<(7-isamp%8);
-			}
-
-			fwrite(iq8_buff, 1, iq_buff_size/4, fp);
-		}
-		else if (data_format==SC08)
-		{
-			for (isamp=0; isamp<2*iq_buff_size; isamp++)
-				iq8_buff[isamp] = iq_buff[isamp]>>4; // 12-bit bladeRF -> 8-bit HackRF
-
-			fwrite(iq8_buff, 1, 2*iq_buff_size, fp);
-		} 
-		else // data_format==SC16
-		{
-			/*
-			for (isamp=0; isamp<2*iq_buff_size; isamp++)
-				iq_buff[isamp] = iq_buff[isamp]>0?1000:-1000; // Emulated 1-bit I/Q
-			*/
-			fwrite(iq_buff, 2, 2*iq_buff_size, fp);
-		}
-#else
 		////////////////////////////////////////////////////////////
 		// Write into FIFO
 		///////////////////////////////////////////////////////////
@@ -2505,7 +2559,7 @@ void *gps_task(void *arg)
 		if (s->head >= FIFO_LENGTH)
 			s->head -= FIFO_LENGTH;
 		pthread_cond_signal(&(s->fifo_read_ready));
-#endif
+
 		//
 		// Update navigation message and channel allocation every 30 seconds
 		//
@@ -2536,7 +2590,7 @@ void *gps_task(void *arg)
 						{
 							// Generate new subframes if allocated
 							if (chan[i].prn!=0) 
-								eph2sbf(eph[ieph][chan[i].prn-1], ionoutc, chan[i].sbf);
+								eph2sbf(eph[ieph][chan[i].prn-1], ionoutc, alm, chan[i].sbf);
 						}
 					}
 						
@@ -2545,7 +2599,7 @@ void *gps_task(void *arg)
 			}
 
 			// Update channel allocation
-			allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[iumd], elvmask);
+			allocateChannel(chan, eph[ieph], ionoutc, alm, grx, xyz[iumd], elvmask);
 
 			// Show ditails about simulated channels
 			if (verb)
@@ -2590,20 +2644,7 @@ abort:
 		free(xyz[i]);
 	free(xyz);
 
-#ifndef BLADE_GPS
-	// Close file
-	fclose(fp);
-
-	tend = clock();
-
-	printf("\nDone!\n");
-
-	// Process time
-	printf("Process time = %.1f [sec]\n", (double)(tend-tstart)/CLOCKS_PER_SEC);
-
-	return(0);
-#else
 exit:
+	printf("Abort.\n");
 	return (NULL);
-#endif
 }

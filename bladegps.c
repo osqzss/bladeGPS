@@ -173,6 +173,7 @@ void usage(void)
 	printf("Usage: bladegps [options]\n"
 		"Options:\n"
 		"  -e <gps_nav>     RINEX navigation file for GPS ephemerides (required)\n"
+		"  -y <yuma_alm>    YUMA almanac file for GPS almanacs\n"
 		"  -u <user_motion> User motion file (dynamic mode)\n"
 		"  -g <nmea_gga>    NMEA GGA stream (dynamic mode)\n"
 		"  -l <location>    Lat,Lon,Hgt (static mode) e.g. 35.274,137.014,100\n"
@@ -211,6 +212,7 @@ int main(int argc, char *argv[])
 	s.finished = false;
 
 	s.opt.navfile[0] = 0;
+	s.opt.almfile[0] = 0;
 	s.opt.umfile[0] = 0;
 	s.opt.g0.week = -1;
 	s.opt.g0.sec = 0.0;
@@ -226,12 +228,15 @@ int main(int argc, char *argv[])
 	s.opt.iono_enable = TRUE;
 	s.opt.path_loss_enable = TRUE;
 
-	while ((result=getopt(argc,argv,"e:u:g:l:T:t:d:x:a:iIp"))!=-1)
+	while ((result=getopt(argc,argv,"e:y:u:g:l:T:t:d:x:a:iIp"))!=-1)
 	{
 		switch (result)
 		{
 		case 'e':
 			strcpy(s.opt.navfile, optarg);
+			break;
+		case 'y':
+			strcpy(s.opt.almfile, optarg);
 			break;
 		case 'u':
 			strcpy(s.opt.umfile, optarg);
@@ -503,7 +508,7 @@ int main(int argc, char *argv[])
 
 	// Running...
 	printf("Running...\n");
-	printf("Press 'q' to abort.\n");
+	printf("Press 'q' to quit.\n");
 
 	// Wainting for TX task to complete.
 	pthread_join(s.tx.thread, NULL);

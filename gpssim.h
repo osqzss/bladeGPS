@@ -1,9 +1,6 @@
 #ifndef GPSSIM_H
 #define GPSSIM_H
 
-// Real-time signal generation with bladeRF
-#define BLADE_GPS
-
 #ifndef TRUE
 #define TRUE	(1)
 #endif
@@ -21,11 +18,7 @@
 #define MAX_CHAN (12)
 
 /*! \brief Maximum number of user motion points */
-#ifndef BLADE_GPS
-#define USER_MOTION_SIZE (3000) // max duration at 10Hz
-#else
 #define USER_MOTION_SIZE (864000) // for 24 hours at 10Hz
-#endif
 
 /*! \brief Number of subframes */
 #define N_SBF (5) // 5 subframes per frame
@@ -35,6 +28,9 @@
 
 /*! \brief Number of words */
 #define N_DWRD ((N_SBF+1)*N_DWRD_SBF) // Subframe word buffer size
+
+#define N_SBF_PAGE (3+2*25) // Subframes 1 to 3 and 25 pages of subframes 4 and 5
+#define MAX_PAGE (25)
 
 /*! \brief C/A code sequence length */
 #define CA_SEQ_LEN (1023)
@@ -46,10 +42,15 @@
 #define SECONDS_IN_MINUTE 60.0
 
 #define POW2_M5  0.03125
-#define POW2_M19 1.907348632812500e-6
+#define POW2_M11 4.8828125e-4
+#define POW2_M19 1.9073486328125e-6
+#define POW2_M20 9.5367431640625e-7
+#define POW2_M21 4.76837158203125e-7
+#define POW2_M23 1.192092895507813e-7
 #define POW2_M29 1.862645149230957e-9
 #define POW2_M31 4.656612873077393e-10
 #define POW2_M33 1.164153218269348e-10
+#define POW2_M38 3.637978807091713e-12
 #define POW2_M43 1.136868377216160e-13
 #define POW2_M55 2.775557561562891e-17
 
@@ -101,6 +102,22 @@ typedef struct
 	int mm;		/*!< Calendar minutes */
 	double sec;	/*!< Calendar seconds */
 } datetime_t;
+
+typedef struct
+{
+	gpstime_t toa; // Time of applicability
+	int id;
+	int health;
+	double ecc; // Eccentricity
+	double inc0; // Inclination
+	double omgdot; // Rate of right ascention
+	double sqrta; // SQRT(A)
+	double omg0; // Right ascention at week
+	double aop; // Argument of perigee
+	double m0; // Mean anomary
+	double af0;
+	double af1;
+} almanac_t;
 
 /*! \brief Structure representing ephemeris of a single satellite */
 typedef struct
@@ -169,8 +186,9 @@ typedef struct
 	int carr_phasestep;	/*< Carrier phasestep */
 	double code_phase; /*< Code phase */
 	gpstime_t g0;	/*!< GPS time at start */
-	unsigned long sbf[5][N_DWRD_SBF]; /*!< current subframe */
+	unsigned long sbf[N_SBF_PAGE][N_DWRD_SBF]; /*!< current subframe */
 	unsigned long dwrd[N_DWRD]; /*!< Data words of sub-frame */
+	int ipage;
 	int iword;	/*!< initial word */
 	int ibit;	/*!< initial bit */
 	int icode;	/*!< initial code */

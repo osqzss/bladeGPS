@@ -7,6 +7,7 @@ The code works with bladeRF and has been tested on Windows 10 and Ubuntu 17.10.
 Usage: bladegps [options]
 Options:
   -e <gps_nav>     RINEX navigation file for GPS ephemerides (required)
+  -y <yuma_alm>    YUMA almanac file for GPS almanacs
   -u <user_motion> User motion file (dynamic mode)
   -g <nmea_gga>    NMEA GGA stream (dynamic mode)
   -l <location>    Lat,Lon,Hgt (static mode) e.g. 35.274,137.014,100

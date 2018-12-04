@@ -49,6 +49,7 @@
 
 typedef struct {
 	char navfile[MAX_CHAR];
+	char almfile[MAX_CHAR];
 	char umfile[MAX_CHAR];
 	int staticLocationMode;
 	int nmeaGGA;
