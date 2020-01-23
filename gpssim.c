@@ -530,8 +530,6 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, const almanac_t *alm, u
 
 	unsigned long ura = 0UL;
 	unsigned long dataId = 1UL;
-	unsigned long sbf4_page25_svId = 63UL;
-	unsigned long sbf5_page25_svId = 51UL;
 
 	unsigned long wna;
 	unsigned long toa;
@@ -541,13 +539,19 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, const almanac_t *alm, u
 	signed long A0,A1;
 	signed long dtls,dtlsf;
 	unsigned long tot,wnt,wnlsf,dn;
-	unsigned long sbf4_page18_svId = 56UL;
 
 	int sv,i;
 	unsigned long svId;
 	signed long deli; // Relative to i0 = 0.30 semicircles
-	unsigned long sbf4_svId[25] = { 57, 0, 0, 0, 0, 57, 0, 0, 0, 0, 57, 62, 52, 53, 54, 57, 55, 56, 58, 59, 57, 60, 61, 62, 63 };
-	unsigned long sbf5_svId[25] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 51 };
+
+	unsigned long sbf4_svId[25] = { 
+		57UL, 0UL, 0UL, 0UL, 0UL, 57UL, 0UL, 0UL, 0UL, 0UL, 
+		57UL, 62UL, 52UL, 53UL, 54UL, 57UL, 55UL, 56UL, 58UL, 
+		59UL, 57UL, 60UL, 61UL, 62UL, 63UL };
+	unsigned long sbf5_svId[25] = { 
+		0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 
+		0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 
+		0UL, 0UL, 0UL, 0UL, 51UL };
 
 	// FIXED: This has to be the "transmission" week number, not for the ephemeris reference time
 	//wn = (unsigned long)(eph.toe.week%1024);
@@ -703,7 +707,7 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, const almanac_t *alm, u
 	{
 		sbf[3 + 17 * 2][0] = 0x8B0000UL<<6;
 		sbf[3 + 17 * 2][1] = 0x4UL<<8;
-		sbf[3 + 17 * 2][2] = (dataId<<28) | (sbf4_page18_svId<<22) | ((alpha0&0xFFUL)<<14) | ((alpha1&0xFFUL)<<6);
+		sbf[3 + 17 * 2][2] = (dataId<<28) | (sbf4_svId[17]<<22) | ((alpha0&0xFFUL)<<14) | ((alpha1&0xFFUL)<<6);
 		sbf[3 + 17 * 2][3] = ((alpha2&0xFFUL)<<22) | ((alpha3&0xFFUL)<<14) | ((beta0&0xFFUL)<<6);
 		sbf[3 + 17 * 2][4] = ((beta1&0xFFUL)<<22) | ((beta2&0xFFUL)<<14) | ((beta3&0xFFUL)<<6);
 		sbf[3 + 17 * 2][5] = (A1&0xFFFFFFUL)<<6;
@@ -717,7 +721,7 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, const almanac_t *alm, u
 	// Subframe 4, page 25: SV health data for PRN 25 through 32
 	sbf[3 + 24 * 2][0] = 0x8B0000UL<<6;
 	sbf[3 + 24 * 2][1] = 0x4UL<<8;
-	sbf[3 + 24 * 2][2] = (dataId<<28) | (sbf4_page25_svId<<22);
+	sbf[3 + 24 * 2][2] = (dataId<<28) | (sbf4_svId[24]<<22);
 	sbf[3 + 24 * 2][3] = 0UL;
 	sbf[3 + 24 * 2][4] = 0UL;
 	sbf[3 + 24 * 2][5] = 0UL;
@@ -774,7 +778,7 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, const almanac_t *alm, u
 
 	sbf[4 + 24 * 2][0] = 0x8B0000UL<<6;
 	sbf[4 + 24 * 2][1] = 0x5UL<<8;
-	sbf[4 + 24 * 2][2] = (dataId<<28) | (sbf5_page25_svId<<22) | ((toa&0xFFUL)<<14) | ((wna&0xFFUL)<<6);
+	sbf[4 + 24 * 2][2] = (dataId<<28) | (sbf5_svId[24]<<22) | ((toa&0xFFUL)<<14) | ((wna&0xFFUL)<<6);
 	sbf[4 + 24 * 2][3] = 0UL;
 	sbf[4 + 24 * 2][4] = 0UL;
 	sbf[4 + 24 * 2][5] = 0UL;
@@ -1038,7 +1042,12 @@ int readAlmanac(almanac_t alm[MAX_SAT], const char *fname)
 			if (NULL == fgets(str, MAX_CHAR, fp))
 				break;
 
-			alm[sv].toa.week = atoi(str + 26) + 1024; // GPS week rollover
+			alm[sv].toa.week = atoi(str + 26);
+			// GPS week rollover
+			if (alm[sv].toa.week > 500)
+				alm[sv].toa.week += 1024;
+			else
+				alm[sv].toa.week += 2048;
 
 			// Valid almanac
 			alm[sv].id = sv + 1;
