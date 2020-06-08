@@ -202,8 +202,9 @@ int main(int argc, char *argv[])
 	double duration;
 	datetime_t t0;
 
-	int txvga1 = TX_VGA1;
-
+	int tx_gain = TX_GAIN;
+	bladerf_channel tx_channel = BLADERF_CHANNEL_TX(0);
+	
 	if (argc<3)
 	{
 		usage();
@@ -302,14 +303,14 @@ int main(int argc, char *argv[])
 			xb_board=atoi(optarg);
 			break;
 		case 'a':
-			txvga1 = atoi(optarg);
-			if (txvga1>0)
-				txvga1 *= -1;
+			tx_gain = atoi(optarg);
+			if (tx_gain>0)
+				tx_gain *= -1;
 
-			if (txvga1<BLADERF_TXVGA1_GAIN_MIN)
-				txvga1 = BLADERF_TXVGA1_GAIN_MIN;
-			else if (txvga1>BLADERF_TXVGA1_GAIN_MAX)
-				txvga1 = BLADERF_TXVGA1_GAIN_MAX;
+			if (tx_gain<BLADERF_TXVGA1_GAIN_MIN)
+				tx_gain = BLADERF_TXVGA1_GAIN_MIN;
+			else if (tx_gain>BLADERF_TXVGA1_GAIN_MAX)
+				tx_gain = BLADERF_TXVGA1_GAIN_MAX;
 			break;
 		case 'i':
 			s.opt.interactive = TRUE;
@@ -437,24 +438,13 @@ int main(int argc, char *argv[])
 		printf("TX bandwidth: %u Hz\n", TX_BANDWIDTH);
 	}
 
-	//s.status = bladerf_set_txvga1(s.tx.dev, TX_VGA1);
-	s.status = bladerf_set_txvga1(s.tx.dev, txvga1);
+	s.status = bladerf_set_gain(s.tx.dev, tx_channel, tx_gain);
 	if (s.status != 0) {
-		fprintf(stderr, "Failed to set TX VGA1 gain: %s\n", bladerf_strerror(s.status));
+		fprintf(stderr, "Failed to set gain: %s\n", bladerf_strerror(s.status));Untitled folder
 		goto out;
 	}
 	else {
-		//printf("TX VGA1 gain: %d dB\n", TX_VGA1);
-		printf("TX VGA1 gain: %d dB\n", txvga1);
-	}
-
-	s.status = bladerf_set_txvga2(s.tx.dev, TX_VGA2);
-	if (s.status != 0) {
-		fprintf(stderr, "Failed to set TX VGA2 gain: %s\n", bladerf_strerror(s.status));
-		goto out;
-	}
-	else {
-		printf("TX VGA2 gain: %d dB\n", TX_VGA2);
+		printf("TX gain: %d dB\n", tx_gain);
 	}
 
 	// Start GPS task.
