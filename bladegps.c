@@ -181,12 +181,12 @@ void usage(void)
 		"  -T <date,time>   Overwrite TOC and TOE to scenario start time\n"
 		"  -d <duration>    Duration [sec] (max: %.0f)\n"
 		"  -x <XB number>   Enable XB board, e.g. '-x 200' for XB200\n"
-		"  -a <tx_vga1>     TX VGA1 (default: %d)\n"
+		"  -a <tx_gain>     TX Gain (default: %d)\n"
 		"  -i               Interactive mode: North='%c', South='%c', East='%c', West='%c'\n"
 		"  -I               Disable ionospheric delay for spacecraft scenario\n"
 		"  -p               Disable path loss and hold power level constant\n",
 		((double)USER_MOTION_SIZE)/10.0, 
-		TX_VGA1,
+		TX_GAIN,
 		NORTH_KEY, SOUTH_KEY, EAST_KEY, WEST_KEY);
 
 	return;
@@ -440,7 +440,7 @@ int main(int argc, char *argv[])
 
 	s.status = bladerf_set_gain(s.tx.dev, tx_channel, tx_gain);
 	if (s.status != 0) {
-		fprintf(stderr, "Failed to set gain: %s\n", bladerf_strerror(s.status));Untitled folder
+		fprintf(stderr, "Failed to set gain: %s\n", bladerf_strerror(s.status));
 		goto out;
 	}
 	else {
