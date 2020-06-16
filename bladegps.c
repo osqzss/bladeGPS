@@ -203,6 +203,8 @@ int main(int argc, char *argv[])
 	datetime_t t0;
 	
 	const struct bladerf_range *range = NULL;
+	double min_gain;
+	double max_gain;
 	int tx_gain = TX_GAIN;
 	bladerf_channel tx_channel = BLADERF_CHANNEL_TX(0);
 	
@@ -434,18 +436,19 @@ int main(int argc, char *argv[])
 		printf("TX bandwidth: %u Hz\n", TX_BANDWIDTH);
 	}
 	
-    	// What is the valid range?
     	s.status = bladerf_get_gain_range(s.tx.dev, tx_channel, &range);
     	if (s.status != 0) {
 		fprintf(stderr, "Failed to check gain range: %s\n", bladerf_strerror(s.status));
 		goto out;
     	}
     	else {
-    		printf("Range: [%g, %g]\n",range->min * range->scale, range->max * range->scale);
-    		if (tx_gain<(range->min * range->scale))
-			tx_gain = range->min * range->scale;
-		else if (tx_gain>(range->max * range->scale))
-			tx_gain = range->max * range->scale;
+    		min_gain = range->min * range->scale;
+    		max_gain = range->max * range->scale;
+    		printf("TX gain range: [%g dB, %g dB] \n",min_gain, max_gain);
+    		if (tx_gain < min_gain)
+			tx_gain = min_gain;
+		else if (tx_gain > max_gain)
+			tx_gain = max_gain;
     	}
 
 	s.status = bladerf_set_gain(s.tx.dev, tx_channel, tx_gain);
