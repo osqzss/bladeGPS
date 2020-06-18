@@ -17,8 +17,7 @@
 #define TX_FREQUENCY	1575420000
 #define TX_SAMPLERATE	2600000
 #define TX_BANDWIDTH	2500000
-#define TX_VGA1			-25
-#define TX_VGA2			0
+#define TX_GAIN		-5
 
 #define NUM_BUFFERS			32
 #define SAMPLES_PER_BUFFER	(32 * 1024)

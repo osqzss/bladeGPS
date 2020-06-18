@@ -181,12 +181,12 @@ void usage(void)
 		"  -T <date,time>   Overwrite TOC and TOE to scenario start time\n"
 		"  -d <duration>    Duration [sec] (max: %.0f)\n"
 		"  -x <XB number>   Enable XB board, e.g. '-x 200' for XB200\n"
-		"  -a <tx_vga1>     TX VGA1 (default: %d)\n"
+		"  -a <tx_gain>     TX Gain (default: %d)\n"
 		"  -i               Interactive mode: North='%c', South='%c', East='%c', West='%c'\n"
 		"  -I               Disable ionospheric delay for spacecraft scenario\n"
 		"  -p               Disable path loss and hold power level constant\n",
 		((double)USER_MOTION_SIZE)/10.0, 
-		TX_VGA1,
+		TX_GAIN,
 		NORTH_KEY, SOUTH_KEY, EAST_KEY, WEST_KEY);
 
 	return;
@@ -201,9 +201,13 @@ int main(int argc, char *argv[])
 	int result;
 	double duration;
 	datetime_t t0;
-
-	int txvga1 = TX_VGA1;
-
+	
+	const struct bladerf_range *range = NULL;
+	double min_gain;
+	double max_gain;
+	int tx_gain = TX_GAIN;
+	bladerf_channel tx_channel = BLADERF_CHANNEL_TX(0);
+	
 	if (argc<3)
 	{
 		usage();
@@ -302,14 +306,9 @@ int main(int argc, char *argv[])
 			xb_board=atoi(optarg);
 			break;
 		case 'a':
-			txvga1 = atoi(optarg);
-			if (txvga1>0)
-				txvga1 *= -1;
-
-			if (txvga1<BLADERF_TXVGA1_GAIN_MIN)
-				txvga1 = BLADERF_TXVGA1_GAIN_MIN;
-			else if (txvga1>BLADERF_TXVGA1_GAIN_MAX)
-				txvga1 = BLADERF_TXVGA1_GAIN_MAX;
+			tx_gain = atoi(optarg);
+			if (tx_gain>0)
+				tx_gain *= -1;
 			break;
 		case 'i':
 			s.opt.interactive = TRUE;
@@ -379,26 +378,26 @@ int main(int argc, char *argv[])
 			goto out;
 		}
 
-		s.status = bladerf_xb200_set_filterbank(s.tx.dev, BLADERF_MODULE_TX, BLADERF_XB200_CUSTOM);
+		s.status = bladerf_xb200_set_filterbank(s.tx.dev, tx_channel, BLADERF_XB200_CUSTOM);
 		if (s.status != 0) {
 			fprintf(stderr, "Failed to set XB200 TX filterbank: %s\n", bladerf_strerror(s.status));
 			goto out;
 		}
 
-		s.status = bladerf_xb200_set_path(s.tx.dev, BLADERF_MODULE_TX, BLADERF_XB200_BYPASS);
+		s.status = bladerf_xb200_set_path(s.tx.dev, tx_channel, BLADERF_XB200_BYPASS);
 		if (s.status != 0) {
 			fprintf(stderr, "Failed to enable TX bypass path on XB200: %s\n", bladerf_strerror(s.status));
 			goto out;
 		}
 
 		//For sake of completeness set also RX path to a known good state.
-		s.status = bladerf_xb200_set_filterbank(s.tx.dev, BLADERF_MODULE_RX, BLADERF_XB200_CUSTOM);
+		s.status = bladerf_xb200_set_filterbank(s.tx.dev, BLADERF_CHANNEL_RX(0), BLADERF_XB200_CUSTOM);
 		if (s.status != 0) {
 			fprintf(stderr, "Failed to set XB200 RX filterbank: %s\n", bladerf_strerror(s.status));
 			goto out;
 		}
 
-		s.status = bladerf_xb200_set_path(s.tx.dev, BLADERF_MODULE_RX, BLADERF_XB200_BYPASS);
+		s.status = bladerf_xb200_set_path(s.tx.dev, BLADERF_CHANNEL_RX(0), BLADERF_XB200_BYPASS);
 		if (s.status != 0) {
 			fprintf(stderr, "Failed to enable RX bypass path on XB200: %s\n", bladerf_strerror(s.status));
 			goto out;
@@ -410,7 +409,7 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	s.status = bladerf_set_frequency(s.tx.dev, BLADERF_MODULE_TX, TX_FREQUENCY);
+	s.status = bladerf_set_frequency(s.tx.dev, tx_channel, TX_FREQUENCY);
 	if (s.status != 0) {
 		fprintf(stderr, "Faield to set TX frequency: %s\n", bladerf_strerror(s.status));
 		goto out;
@@ -419,7 +418,7 @@ int main(int argc, char *argv[])
 		printf("TX frequency: %u Hz\n", TX_FREQUENCY);
 	}
 
-	s.status = bladerf_set_sample_rate(s.tx.dev, BLADERF_MODULE_TX, TX_SAMPLERATE, NULL);
+	s.status = bladerf_set_sample_rate(s.tx.dev, tx_channel, TX_SAMPLERATE, NULL);
 	if (s.status != 0) {
 		fprintf(stderr, "Failed to set TX sample rate: %s\n", bladerf_strerror(s.status));
 		goto out;
@@ -428,7 +427,7 @@ int main(int argc, char *argv[])
 		printf("TX sample rate: %u sps\n", TX_SAMPLERATE);
 	}
 
-	s.status = bladerf_set_bandwidth(s.tx.dev, BLADERF_MODULE_TX, TX_BANDWIDTH, NULL);
+	s.status = bladerf_set_bandwidth(s.tx.dev, tx_channel, TX_BANDWIDTH, NULL);
 	if (s.status != 0) {
 		fprintf(stderr, "Failed to set TX bandwidth: %s\n", bladerf_strerror(s.status));
 		goto out;
@@ -436,25 +435,29 @@ int main(int argc, char *argv[])
 	else {
 		printf("TX bandwidth: %u Hz\n", TX_BANDWIDTH);
 	}
+	
+    	s.status = bladerf_get_gain_range(s.tx.dev, tx_channel, &range);
+    	if (s.status != 0) {
+		fprintf(stderr, "Failed to check gain range: %s\n", bladerf_strerror(s.status));
+		goto out;
+    	}
+    	else {
+    		min_gain = range->min * range->scale;
+    		max_gain = range->max * range->scale;
+    		printf("TX gain range: [%g dB, %g dB] \n",min_gain, max_gain);
+    		if (tx_gain < min_gain)
+			tx_gain = min_gain;
+		else if (tx_gain > max_gain)
+			tx_gain = max_gain;
+    	}
 
-	//s.status = bladerf_set_txvga1(s.tx.dev, TX_VGA1);
-	s.status = bladerf_set_txvga1(s.tx.dev, txvga1);
+	s.status = bladerf_set_gain(s.tx.dev, tx_channel, tx_gain);
 	if (s.status != 0) {
-		fprintf(stderr, "Failed to set TX VGA1 gain: %s\n", bladerf_strerror(s.status));
+		fprintf(stderr, "Failed to set gain: %s\n", bladerf_strerror(s.status));
 		goto out;
 	}
 	else {
-		//printf("TX VGA1 gain: %d dB\n", TX_VGA1);
-		printf("TX VGA1 gain: %d dB\n", txvga1);
-	}
-
-	s.status = bladerf_set_txvga2(s.tx.dev, TX_VGA2);
-	if (s.status != 0) {
-		fprintf(stderr, "Failed to set TX VGA2 gain: %s\n", bladerf_strerror(s.status));
-		goto out;
-	}
-	else {
-		printf("TX VGA2 gain: %d dB\n", TX_VGA2);
+		printf("TX gain: %d dB\n", tx_gain);
 	}
 
 	// Start GPS task.
@@ -478,7 +481,7 @@ int main(int argc, char *argv[])
 
 	// Configure the TX module for use with the synchronous interface.
 	s.status = bladerf_sync_config(s.tx.dev,
-			BLADERF_MODULE_TX,
+			tx_channel,
 			BLADERF_FORMAT_SC16_Q11,
 			NUM_BUFFERS,
 			SAMPLES_PER_BUFFER,
@@ -491,7 +494,7 @@ int main(int argc, char *argv[])
 	}
 
 	// We must always enable the modules *after* calling bladerf_sync_config().
-	s.status = bladerf_enable_module(s.tx.dev, BLADERF_MODULE_TX, true);
+	s.status = bladerf_enable_module(s.tx.dev, tx_channel, true);
 	if (s.status != 0) {
 		fprintf(stderr, "Failed to enable TX module: %s\n", bladerf_strerror(s.status));
 		goto out;
@@ -515,7 +518,7 @@ int main(int argc, char *argv[])
 	printf("\nDone!\n");
 
 	// Disable TX module and shut down underlying TX stream.
-	s.status = bladerf_enable_module(s.tx.dev, BLADERF_MODULE_TX, false);
+	s.status = bladerf_enable_module(s.tx.dev, tx_channel, false);
 	if (s.status != 0)
 		fprintf(stderr, "Failed to disable TX module: %s\n", bladerf_strerror(s.status));
 
