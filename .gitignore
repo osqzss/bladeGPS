@@ -46,3 +46,6 @@ Temporary Items
 *.o
 *.swp
 bladegps
+
+# Password File for Wget
+.wgetrc
