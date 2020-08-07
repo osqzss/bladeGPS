@@ -1,6 +1,5 @@
 #!/bin/bash
 
-pwd
 export BLADERF_SEARCH_DIR="./external/prebuilt/fpga_images" 
 year=`date -u +%Y`
 day=`date -u +%j`

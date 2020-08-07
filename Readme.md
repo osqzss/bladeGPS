@@ -74,6 +74,66 @@ $ cd ../../../bladeGPS
 $ make
 ```
 
+### Build on Mac OS X (Catalina)
+
+1. Install [Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12)
+
+2. Install Xcode Command Line Tools
+
+ ```
+$ xcode-select --install
+```
+3. Install [MacPorts](https://www.macports.org/install.php)
+
+4. Create a symlink to port
+
+ ```
+$ sudo ln -s /opt/local/bin/port /usr/local/bin/port
+```
+
+5. Install bladeRF
+
+ ```
+$ sudo port install bladeRF +tecla
+```
+
+6. Install cmake
+
+ ```
+$ sudo port install cmake
+```
+
+7. Retrive the bladeRF source in a directory next to the current directory.
+
+ ```
+$ cd ..
+$ git clone git@github.com:Nuand/bladeRF.git
+```
+
+8. Build the bladeRF host library.
+
+ ```
+$ cd bladeRF/host
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make && sudo make install
+```
+
+9. Install libomp and wget.
+
+ ```
+$ sudo port install libomp
+$ sudo port install wget
+```
+
+10. Compile for \_MACOSX with OpenMP path and build bladeGPS.
+
+ ```
+$ cd ../../../bladeGPS
+$ make CFLAGS=”-I/opt/local/include/libomp _MACOSX”
+```
+
 ### License
 
 Copyright &copy; 2015 Takuji Ebinuma  
