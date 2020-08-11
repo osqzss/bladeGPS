@@ -25,18 +25,22 @@ if [ ! -e "$brdc_file_year" ]; then
 fi
 
 if [ ! -e "external/prebuilt/fpga_images/hostedx115.rbf" ]; then
+  echo "downloading hostedx115.rbf to external/prebuilt/fpga_images"
   wget "https://www.nuand.com/fpga/v0.11.0/hostedx115.rbf" -P external/prebuilt/fpga_images
 fi
 
 if [ ! -e "external/prebuilt/fpga_images/hostedx40.rbf" ]; then
+  echo "downloading hostedx40.rbf to external/prebuilt/fpga_images"
   wget "https://www.nuand.com/fpga/v0.11.0/hostedx40.rbf" -P external/prebuilt/fpga_images
 fi
 
 if [ ! -e "external/prebuilt/fpga_images/hostedxA4.rbf" ]; then
+  echo "downloading hostedxA4.rbf to external/prebuilt/fpga_images"
   wget "https://www.nuand.com/fpga/v0.11.0/hostedxA4.rbf" -P external/prebuilt/fpga_images
 fi
 
 if [ ! -e "external/prebuilt/fpga_images/hostedxA9.rbf" ]; then
+  echo "downloading hostedxA9.rbf to external/prebuilt/fpga_images"
   wget "https://www.nuand.com/fpga/v0.11.0/hostedxA9.rbf" -P external/prebuilt/fpga_images
 fi
 

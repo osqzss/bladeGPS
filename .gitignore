@@ -49,3 +49,6 @@ bladegps
 
 # Password File for Wget
 .wgetrc
+
+#FPGA images
+external/
