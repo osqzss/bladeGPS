@@ -14,7 +14,11 @@
 #include <unistd.h>
 // For _kbhit() and _getch() on Linux
 #include <termios.h>
+#ifdef _MACOSX
+#include <stdio.h>
+#else
 #include <stdio_ext.h> // for __fpurge()
+#endif
 #endif
 
 #include "gpssim.h"
@@ -1946,8 +1950,11 @@ int _getch()
 	int ch;
 	
 	ch = getchar();
+#ifdef _MACOSX
+	fpurge(stdin); // Clear STDIN buffer
+#else
 	__fpurge(stdin); // Clear STDIN buffer
-	
+#endif
 	return ch;
 }
 #endif
