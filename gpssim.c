@@ -14,7 +14,7 @@
 #include <unistd.h>
 // For _kbhit() and _getch() on Linux
 #include <termios.h>
-#ifdef _MACOSX
+#ifdef __APPLE__
 #include <stdio.h>
 #else
 #include <stdio_ext.h> // for __fpurge()
@@ -1950,7 +1950,7 @@ int _getch()
 	int ch;
 	
 	ch = getchar();
-#ifdef _MACOSX
+#ifdef __APPLE__
 	fpurge(stdin); // Clear STDIN buffer
 #else
 	__fpurge(stdin); // Clear STDIN buffer
