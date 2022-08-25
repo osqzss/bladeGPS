@@ -134,7 +134,21 @@ $ cd ../../../bladeGPS
 $ make CFLAGS=”-I/opt/local/include/libomp _MACOSX”
 ```
 
-###
+### Docker Ubuntu 20.04
+
+A `Dockerfile` was created for Ubuntu 20.04. 
+
+1. Build docker image
+
+    cd docker
+    docker build -t bladegps .
+
+2. Run docker image by passing in device and command
+
+    docker run -it --rm --device /dev/ttyusb0 bladegps /bin/bash
+
+3. From docker terminal run bladegps command
+
 ### License
 
 Copyright &copy; 2015 Takuji Ebinuma  
