@@ -27,18 +27,18 @@ Follow the instructions at [Nuand wiki page](https://github.com/Nuand/bladeRF/wi
 1. Start Visual Studio.
 2. Create an empty project for a console application.
 3. On the _Solution Explorer_ at right, add the following files to the project:
- * __bladegps.c__ and __bladegps.h__
- * __gpssim.c__ and __gpssim.h__
- * __getopt.c__ and __getopt.h__
+    * __bladegps.c__ and __bladegps.h__
+    * __gpssim.c__ and __gpssim.h__
+    * __getopt.c__ and __getopt.h__
 4. Add the paths to the following folders in `Configuration Properties -> C/C++ -> General -> Additional Include Directories`:
- * __pthreads-w32-2-9-1-release/Pre-built.2/include__ for pthread.h
- * __bladeRF/include__ for libbladeRF.h
+    * __pthreads-w32-2-9-1-release/Pre-built.2/include__ for pthread.h
+    * __bladeRF/include__ for libbladeRF.h
 5. Add the paths to the following folders in `Configuration Properties -> Linker -> General -> Additional Library Directories`:
- * __pthreads-w32-2-9-1-release/Pre-built.2/lib/x64__ for pthreadVC2.lib
- * __bladeRF/x64__ for bladeRF.lib
+    * __pthreads-w32-2-9-1-release/Pre-built.2/lib/x64__ for pthreadVC2.lib
+    * __bladeRF/x64__ for bladeRF.lib
 6. Specify the name of the additional libraries in `Configuration Properties -> Linker -> Input -> Additional Dependencies`:
- * __pthreadVC2.lib__
- * __bladeRF.lib__
+    * __pthreadVC2.lib__
+    * __bladeRF.lib__
 7. Select __Release__ in the _Solution Configurations_ drop-down list.
 8. Select __X64__ in the _Sofution Platforms_ drop-down list.
 9. Run `Build -> Build Solution`
