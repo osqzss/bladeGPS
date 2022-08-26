@@ -131,7 +131,7 @@ a [docker container](https://docs.docker.com/get-started/overview/) in seconds.
 
 ### Docker Compose
 
-A `docker-compose.yml` example is provided if you want to run bladegps as a 
+A `docker-compose.yml` example is provided, if you want to run bladegps as a 
 service, restarting when it hits end of duration. Edit command in file
 before starting up service using [docker-compose](https://docs.docker.com/compose/).
 
