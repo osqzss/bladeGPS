@@ -24,8 +24,8 @@ Options:
 
 Follow the instructions at [Nuand wiki page](https://github.com/Nuand/bladeRF/wiki/Getting-Started%3A-Windows) and build the bladeRF library from the source with Visual Studio 2013 Express for Windows Desktop. Assume you already downloaded pthread and libusb files and successfully built the bladeRF library for your Windows environment.
 
-1. Start Visual Studio.
-2. Create an empty project for a console application.
+1. Start Visual Studio
+2. Create an empty project for a console application
 3. On the _Solution Explorer_ at right, add the following files to the project:
     * __bladegps.c__ and __bladegps.h__
     * __gpssim.c__ and __gpssim.h__
@@ -39,8 +39,8 @@ Follow the instructions at [Nuand wiki page](https://github.com/Nuand/bladeRF/wi
 6. Specify the name of the additional libraries in `Configuration Properties -> Linker -> Input -> Additional Dependencies`:
     * __pthreadVC2.lib__
     * __bladeRF.lib__
-7. Select __Release__ in the _Solution Configurations_ drop-down list.
-8. Select __X64__ in the _Sofution Platforms_ drop-down list.
+7. Select __Release__ in the _Solution Configurations_ drop-down list
+8. Select __X64__ in the _Sofution Platforms_ drop-down list
 9. Run `Build -> Build Solution`
 
 After a successful build, you can find the executable in the __Release__ folder. You should put the copies of the following DLLs in the same folder to run the code:
@@ -50,12 +50,12 @@ After a successful build, you can find the executable in the __Release__ folder.
 
 ### Build on Linux (Ubuntu 20.04)
 
-1. Retrieve the bladeRF source in a directory next to the current directory.
+1. Retrieve the bladeRF source in a directory next to the current directory
 
         $ cd ..
         $ git clone git@github.com:Nuand/bladeRF.git
 
-2. Build the bladeRF host library.
+2. Build the bladeRF host library
 
         $ cd bladeRF/host
         $ mkdir build
@@ -63,7 +63,7 @@ After a successful build, you can find the executable in the __Release__ folder.
         $ cmake ..
         $ make
 
-3. Build bladeGPS.
+3. Build bladeGPS
 
         $ cd ../../../bladeGPS
         $ make
@@ -90,12 +90,12 @@ After a successful build, you can find the executable in the __Release__ folder.
 
         $ sudo port install cmake
 
-7. Retrieve the bladeRF source in a directory next to the current directory.
+7. Retrieve the bladeRF source in a directory next to the current directory
 
         $ cd ..
         $ git clone git@github.com:Nuand/bladeRF.git
 
-8. Build the bladeRF host library.
+8. Build the bladeRF host library
 
         $ cd bladeRF/host
         $ mkdir build
@@ -103,12 +103,12 @@ After a successful build, you can find the executable in the __Release__ folder.
         $ cmake ..
         $ make && sudo make install
 
-9. Install libomp and wget.
+9. Install libomp and wget
 
         $ sudo port install libomp
         $ sudo port install wget
 
-10. Compile for \_MACOSX with OpenMP path and build bladeGPS.
+10. Compile for \_MACOSX with OpenMP path and build bladeGPS
 
         $ cd ../../../bladeGPS
         $ make CFLAGS=”-I/opt/local/include/libomp _MACOSX”
@@ -146,7 +146,7 @@ before starting up service using [docker-compose](https://docs.docker.com/compos
 
 3. Connect to container running service, if desired
 
-        $ docker-compose exec blade /bin/bash
+        $ docker-compose exec bladegps /bin/bash
 
 4. Down the service when done
 
