@@ -134,20 +134,56 @@ $ cd ../../../bladeGPS
 $ make CFLAGS=”-I/opt/local/include/libomp _MACOSX”
 ```
 
-### Docker Ubuntu 20.04
+### Docker 
 
-A `Dockerfile` was created for Ubuntu 20.04. 
+A `Dockerfile` was created from Ubuntu 20.04 image that allows you to spin up 
+a [docker container](https://docs.docker.com/get-started/overview/) in seconds. 
 
 1. Build docker image
 
-    cd docker
-    docker build -t bladegps .
+ ```
+ cd docker
+ docker build -t bladegps .
+ ```
 
 2. Run docker image by passing in device and command
 
-    docker run -it --rm --device /dev/ttyusb0 bladegps /bin/bash
+ ```
+ docker run -it --rm --device /dev/ttyUSB0 bladegps /bin/bash
+ ```
 
-3. From docker terminal run bladegps command
+3. From docker terminal, run desired bladegps command
+
+### Docker Compose
+
+A `docker-compose.yml` example is provided if you want to run bladegps as a 
+service, restarting when it hits end of duration. Edit command in file
+before starting up service using [docker-compose](https://docs.docker.com/compose/).
+
+1. Run docker compose service in background
+
+ ```
+ $ cd docker
+ $ docker-compose up -d
+```
+
+2. Check docker-compose process status
+
+ ```
+ $ docker-compose ps
+ ```
+
+3. Connect to container running service, if desired
+
+ ```
+ $ docker-compose exec blade /bin/bash
+ ```
+
+4. Down the service when done
+
+ ```
+ $ docker-compose down
+```
 
 ### License
 
