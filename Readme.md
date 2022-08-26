@@ -52,27 +52,21 @@ After a successful build, you can find the executable in the __Release__ folder.
 
 1. Retrieve the bladeRF source in a directory next to the current directory.
 
- ```
-$ cd ..
-$ git clone git@github.com:Nuand/bladeRF.git
-```
+        $ cd ..
+        $ git clone git@github.com:Nuand/bladeRF.git
 
 2. Build the bladeRF host library.
 
- ```
-$ cd bladeRF/host
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make
-```
+        $ cd bladeRF/host
+        $ mkdir build
+        $ cd build
+        $ cmake ..
+        $ make
 
 3. Build bladeGPS.
 
- ```
-$ cd ../../../bladeGPS
-$ make
-```
+        $ cd ../../../bladeGPS
+        $ make
 
 ### Build on Mac OS X (Catalina)
 
@@ -80,59 +74,44 @@ $ make
 
 2. Install Xcode Command Line Tools
 
- ```
-$ xcode-select --install
-```
+        $ xcode-select --install
+
 3. Install [MacPorts](https://www.macports.org/install.php)
 
 4. Create a symlink to port
 
- ```
-$ sudo ln -s /opt/local/bin/port /usr/local/bin/port
-```
+        $ sudo ln -s /opt/local/bin/port /usr/local/bin/port
 
 5. Install bladeRF
 
- ```
-$ sudo port install bladeRF +tecla
-```
+        $ sudo port install bladeRF +tecla
 
 6. Install cmake
 
- ```
-$ sudo port install cmake
-```
+        $ sudo port install cmake
 
 7. Retrieve the bladeRF source in a directory next to the current directory.
 
- ```
-$ cd ..
-$ git clone git@github.com:Nuand/bladeRF.git
-```
+        $ cd ..
+        $ git clone git@github.com:Nuand/bladeRF.git
 
 8. Build the bladeRF host library.
 
- ```
-$ cd bladeRF/host
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make && sudo make install
-```
+        $ cd bladeRF/host
+        $ mkdir build
+        $ cd build
+        $ cmake ..
+        $ make && sudo make install
 
 9. Install libomp and wget.
 
- ```
-$ sudo port install libomp
-$ sudo port install wget
-```
+        $ sudo port install libomp
+        $ sudo port install wget
 
 10. Compile for \_MACOSX with OpenMP path and build bladeGPS.
 
- ```
-$ cd ../../../bladeGPS
-$ make CFLAGS=”-I/opt/local/include/libomp _MACOSX”
-```
+        $ cd ../../../bladeGPS
+        $ make CFLAGS=”-I/opt/local/include/libomp _MACOSX”
 
 ### Docker 
 
@@ -141,16 +120,12 @@ a [docker container](https://docs.docker.com/get-started/overview/) in seconds.
 
 1. Build docker image
 
- ```
- cd docker
- docker build -t bladegps .
- ```
+        $ cd docker
+        $ docker build -t bladegps .
 
 2. Run docker image by passing in device and command
 
- ```
- docker run -it --rm --device /dev/ttyUSB0 bladegps /bin/bash
- ```
+        $ docker run -it --rm --device /dev/ttyUSB0 bladegps /bin/bash
 
 3. From docker terminal, run desired bladegps command
 
@@ -162,28 +137,20 @@ before starting up service using [docker-compose](https://docs.docker.com/compos
 
 1. Run docker compose service in background
 
- ```
- $ cd docker
- $ docker-compose up -d
-```
+        $ cd docker
+        $ docker-compose up -d
 
 2. Check docker-compose process status
 
- ```
- $ docker-compose ps
- ```
+        $ docker-compose ps
 
 3. Connect to container running service, if desired
 
- ```
- $ docker-compose exec blade /bin/bash
- ```
+        $ docker-compose exec blade /bin/bash
 
 4. Down the service when done
 
- ```
- $ docker-compose down
-```
+        $ docker-compose down
 
 ### License
 
