@@ -154,5 +154,5 @@ before starting up service using [docker-compose](https://docs.docker.com/compos
 
 ### License
 
-Copyright &copy; 2015 Takuji Ebinuma  
+Copyright &copy; 2015-2022 Takuji Ebinuma  
 Distributed under the [MIT License](http://www.opensource.org/licenses/mit-license.php).
