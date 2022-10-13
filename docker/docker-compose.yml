@@ -4,10 +4,12 @@ services:
   bladegps:
     build:
       context: .
-    command: bladegps #-e brdc3300.18n -l 35.274,137.014,100 -d 86400
+    cap_add:
+    - ALL
+    command: bladegps -e /opt/bladeGPS/brdc3300.18n -l 35.274,137.014,100 -d 86400
     container_name: bladegps
-    # devices:
-    # - /dev/ttyUSB0:/dev/ttyUSB0
+    devices:
+    - /dev/ttyUSB0
     logging:
       driver: json-file
       options:

@@ -123,17 +123,20 @@ a [docker container](https://docs.docker.com/get-started/overview/) in seconds.
         $ cd docker
         $ docker build -t bladegps .
 
-2. Run docker image by passing in device and command
+2. Run bladegps command directly
 
-        $ docker run -it --rm --device /dev/ttyUSB0 bladegps /bin/bash
+        $ docker run -it --rm --privileged --device /dev/ttyUSB0 bladegps /bin/bash -c "bladegps -e /opt/bladeGPS/brdc3300.18n -l 35.274,137.014,100 -d 86400"
 
-3. From docker terminal, run desired bladegps command
+3. Run bladegps command from docker cli
+
+        $ docker run -it --rm --privileged --device /dev/ttyUSB0 bladegps /bin/bash
+        bladegps@cb744220dea3:~$ bladegps -e /opt/bladeGPS/brdc3300.18n -l 35.274,137.014,100 -d 86400
 
 ### Docker Compose
 
 A `docker-compose.yml` example is provided, if you want to run bladegps as a 
-service, restarting when it hits end of duration. Edit command in file
-before starting up service using [docker-compose](https://docs.docker.com/compose/).
+service, restarting when it hits end of duration. Edit command and the device 
+name before starting up service using [docker-compose](https://docs.docker.com/compose/).
 
 1. Run docker-compose service in background
 
@@ -154,5 +157,5 @@ before starting up service using [docker-compose](https://docs.docker.com/compos
 
 ### License
 
-Copyright &copy; 2015-2022 Takuji Ebinuma  
+Copyright &copy; 2015 Takuji Ebinuma  
 Distributed under the [MIT License](http://www.opensource.org/licenses/mit-license.php).
