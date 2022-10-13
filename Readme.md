@@ -125,7 +125,8 @@ a [docker container](https://docs.docker.com/get-started/overview/) in seconds.
 
 2. Run bladegps command directly
 
-        $ docker run -it --rm --privileged --device /dev/ttyUSB0 bladegps /bin/bash -c "bladegps -e /opt/bladeGPS/brdc3300.18n -l 35.274,137.014,100 -d 86400"
+        $ docker run -it --rm --privileged --device /dev/ttyUSB0 bladegps \
+                /bin/bash -c "bladegps -e /opt/bladeGPS/brdc3300.18n -l 35.274,137.014,100 -d 86400"
 
 3. Run bladegps command from docker cli
 
